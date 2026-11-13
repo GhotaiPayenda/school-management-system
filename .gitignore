@@ -2,10 +2,15 @@ node_modules/
 web/node_modules/
 web/dist/
 web/.vite/
-storage/
+web/playwright-report/
+web/test-results/
+storage/**
 !storage/.gitkeep
+!storage/README.md
 *.sqlite
 *.sqlite3
+*.sqlite-wal
+*.sqlite-shm
 *.db
 *.db-wal
 *.db-shm
@@ -16,3 +21,4 @@ Thumbs.db
 playwright-report/
 test-results/
 .worktrees/
+tests/.tmp/

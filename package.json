@@ -1,0 +1,23 @@
+{
+  "name": "meridian-academy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Meridian Academy school management system — PHP API and React SPA",
+  "scripts": {
+    "setup": "npm run db:setup && npm run install:web",
+    "install:web": "npm --prefix web install",
+    "db:migrate": "php scripts/db.php migrate",
+    "db:seed": "php scripts/db.php seed",
+    "db:setup": "php scripts/db.php setup",
+    "db:fresh": "php scripts/db.php fresh",
+    "dev:api": "php -S 127.0.0.1:8000 -t api/public api/public/router.php",
+    "dev:web": "npm --prefix web run dev",
+    "build": "npm --prefix web run build",
+    "start": "php -S 0.0.0.0:8000 -t api/public api/public/router.php",
+    "lint:php": "php scripts/lint-php.php",
+    "test": "npm run test:api",
+    "test:api": "node --test \"tests/api/**/*.test.js\"",
+    "test:e2e": "npm --prefix web run test:e2e"
+  }
+}
