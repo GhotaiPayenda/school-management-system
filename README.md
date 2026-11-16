@@ -29,7 +29,15 @@ npm run setup
 npm run db:setup
 ```
 
-Start the API and the Vite dev server in two terminals:
+Start both servers from the repository root with one command:
+
+```powershell
+npm run dev
+```
+
+The launcher prefixes output with `[api]` and `[web]`; press Ctrl+C to stop
+both. In PowerShell you can also run `.\dev.ps1`. To run the servers in separate
+terminals instead:
 
 ```powershell
 npm run dev:api

@@ -11,6 +11,7 @@
     "db:seed": "php scripts/db.php seed",
     "db:setup": "php scripts/db.php setup",
     "db:fresh": "php scripts/db.php fresh",
+    "dev": "node scripts/dev.mjs",
     "dev:api": "php -S 127.0.0.1:8000 -t api/public api/public/router.php",
     "dev:web": "npm --prefix web run dev",
     "build": "npm --prefix web run build",
