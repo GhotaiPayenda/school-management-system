@@ -1,13 +1,14 @@
 # Meridian Academy
 
-A single-tenant, self-hosted school management system for one K-12 school. The
-repository contains a plain PHP JSON API, a React single-page application, and a
-SQLite database with migrations and seeders.
+A single-tenant, self-hosted K-12 school management system for one school of
+roughly 3,000 students and 200 staff. The repository contains a plain PHP JSON
+API, a React single-page application, and a SQLite database with migrations and
+seeders.
 
-This is the walking skeleton: authentication, sessions, CSRF protection, login
-rate limiting, forced temporary-password change, role-based access control, and
-a role-aware application shell. Academic, people, attendance, exam, finance, and
-library modules arrive in later tickets.
+The v1 modules cover academic setup, timetables, people and admissions,
+attendance, exams and results, report cards, finance, the library, announcements,
+audit history, backup and restore, CSV import and export, and role-specific
+staff, student, and guardian portals.
 
 ## Requirements
 
@@ -37,15 +38,38 @@ npm run dev:web
 
 Open <http://127.0.0.1:5173>. Vite proxies `/api` to `http://127.0.0.1:8000`.
 
-### Seeded account
+## Seeded accounts
 
-| Role        | Email                    | Temporary password |
-| ----------- | ------------------------ | ------------------ |
-| Super Admin | `admin@meridian.academy` | `Meridian@2026`    |
+The first sign-in for the Super Admin forces a password change. After the
+change, the temporary password no longer works. Override the Super Admin seed
+with `MERIDIAN_ADMIN_EMAIL` and `MERIDIAN_ADMIN_PASSWORD`.
 
-The first sign-in forces a password change. After the change, the temporary
-password no longer works. Override the seed with `MERIDIAN_ADMIN_EMAIL` and
-`MERIDIAN_ADMIN_PASSWORD` before running the seeder.
+| Role        | Email                       | Password           |
+| ----------- | --------------------------- | ------------------ |
+| Super Admin | `admin@meridian.academy`    | `Meridian@2026`    |
+| Principal   | `principal.demo@meridian.academy` | `Meridian@2026` |
+| Registrar   | `registrar.demo@meridian.academy` | `Meridian@2026` |
+| Accountant  | `accountant.demo@meridian.academy` | `Meridian@2026` |
+| Librarian   | `librarian.demo@meridian.academy` | `Meridian@2026` |
+| Teacher     | `teacher.demo@meridian.academy` | `Meridian@2026` |
+| Student     | `student.demo@meridian.academy` | `Meridian@2026` |
+| Guardian    | `guardian.demo@meridian.academy` | `Meridian@2026` |
+
+The demo school seeds 12 Grade Levels, two Sections per grade, 144 students,
+14 staff members, timetables, attendance, First and Final Exams with scores,
+supplementary examples, published report cards, fee structures, issued invoices,
+payments, library loans and fines, announcements, applicants, and audit entries.
+The demo academic year is generated relative to the current date while keeping
+the Afghan March-to-January shape.
+
+Reset the demo at any time:
+
+```powershell
+npm run db:fresh
+```
+
+`fresh` deletes the SQLite file, reapplies every migration, and reruns every
+seeder.
 
 ## Production-style run
 
@@ -60,6 +84,9 @@ npm start
 assets from `web/dist`, and falls back to `web/dist/index.html` for client-side
 routes. Set `MERIDIAN_WEB_DIST` to use a different build directory.
 
+For a normal deployment, point nginx or Apache at `api/public` and let the same
+front controller serve `/api/v1` while a static host serves `web/dist`.
+
 Runtime data (the SQLite database, WAL files, uploads, and backups) lives in
 `storage/` and is ignored by Git. The database directory is created on first
 use.
@@ -70,13 +97,50 @@ Environment variables override the defaults in `api/config.php`:
 
 | Variable                  | Purpose                                                        |
 | ------------------------- | -------------------------------------------------------------- |
-| `MERIDIAN_ENV`            | `local` (default) or `test`/production                        |
-| `MERIDIAN_DB_PATH`        | SQLite file path, default `storage/meridian.sqlite`             |
-| `MERIDIAN_STORAGE_PATH`   | Uploads and backups directory, default `storage/`               |
-| `MERIDIAN_WEB_DIST`       | Built SPA directory, default `web/dist`                         |
+| `MERIDIAN_ENV`            | `local` (default) or `test`/production                         |
+| `MERIDIAN_DB_PATH`        | SQLite file path, default `storage/meridian.sqlite`            |
+| `MERIDIAN_STORAGE_PATH`   | Uploads and backups directory, default `storage/`              |
+| `MERIDIAN_WEB_DIST`       | Built SPA directory, default `web/dist`                        |
 | `MERIDIAN_SECURE_COOKIES` | `1` adds the `Secure` attribute to the session cookie          |
 | `MERIDIAN_ADMIN_EMAIL`    | Email for the seeded Super Admin                               |
 | `MERIDIAN_ADMIN_PASSWORD` | Temporary password for the seeded Super Admin                  |
+
+## Languages, dates, and themes
+
+The interface defaults to English and includes complete Dari (`fa-AF`) and
+Pashto (`ps-AF`) catalogs. Switching language in the top bar sets the document
+direction to RTL for Dari and Pashto, swaps to Arabic-script fonts, and renders
+dates with the Solar Hijri calendar and Eastern Arabic-Indic digits. Stored dates
+remain ISO Gregorian strings.
+
+The light and dark themes use the same design tokens. Language and theme choices
+are stored in `meridian.language` and `meridian.theme` in `localStorage`, so they
+survive reloads and sign-in.
+
+## Printing
+
+Report cards, payment receipts, section timetables, exam schedules, student ID
+cards, and section class lists each render a dedicated print sheet with the
+school identity header. Open the record and choose **Print**; when a dialog is
+open the application shell is hidden so only the document reaches the printer.
+The sheets follow the active language, direction, digits, and calendar.
+
+## Backups and restore
+
+A Super Admin can create, download, and delete SQLite backups from **Operations**
+or through the API:
+
+- `GET /api/v1/operations/info`
+- `GET /api/v1/operations/backups`
+- `POST /api/v1/operations/backups`
+- `GET /api/v1/operations/backups/{id}/download`
+- `DELETE /api/v1/operations/backups/{id}`
+- `POST /api/v1/operations/restore`
+
+Restore validates the uploaded SQLite image and its table and column
+compatibility before copying it over the live database inside a transaction. A
+failed restore leaves the original database intact. Backup and restore actions
+create Audit Entries.
 
 ## Quality gates
 
@@ -91,9 +155,28 @@ SQLite file, seeds it, and talks to it with Node's built-in test runner and
 `fetch`. Every test case gets a fresh server and database; no case depends on
 another case's order.
 
-Browser smoke tests are a secondary, opt-in seam. See
-[`web/e2e/README.md`](web/e2e/README.md) for the disposable-database command
-sequence.
+Browser smoke tests are a secondary, opt-in seam. They need a disposable
+database and both servers:
+
+```powershell
+$env:MERIDIAN_DB_PATH = "$PWD\storage\e2e.sqlite"
+$env:MERIDIAN_STORAGE_PATH = "$PWD\storage\e2e-storage"
+php scripts/db.php fresh --database="$env:MERIDIAN_DB_PATH" --storage="$env:MERIDIAN_STORAGE_PATH"
+# Terminal 1
+php -S 127.0.0.1:8000 -t api/public api/public/router.php
+# Terminal 2
+npm --prefix web run dev
+# Terminal 3
+$env:MERIDIAN_E2E = "1"
+npm run test:e2e
+```
+
+The browser journeys cover the forced password change and every staff module,
+the printable timetable, exam schedule, report card, receipt, ID card, and class
+list surfaces, Teacher RBAC, Guardian portal isolation, and language/RTL/theme
+persistence. The admin journey changes the temporary password, so rebuild the
+disposable database before rerunning the suite. See
+[`web/e2e/README.md`](web/e2e/README.md) for details.
 
 ## Layout
 
@@ -113,8 +196,6 @@ docs/                   Spec, shared understanding, ADRs, agent conventions
 ```
 
 ## API conventions
-
-These are fixed for later tickets.
 
 - Base path: `/api/v1`.
 - Success envelope: `{ "data": ... }`. List responses put the collection under a
@@ -140,8 +221,9 @@ These are fixed for later tickets.
   fixtures live in `tests/api/fixtures/`; do not create test data through the
   production seed command.
 - New SPA modules use Redux Toolkit slices with async thunks and the shared
-  axios client in `web/src/api/client.js`. The client attaches CSRF tokens and
-  normalizes errors; do not create a second HTTP client.
+  axios client in `web/src/api/client.js`. The client attaches CSRF tokens,
+  retries safe reads after a transient network failure, and normalizes errors;
+  do not create a second HTTP client.
 - The UI is English-first but must stay ready for Dari (`fa-AF`) and Pashto
   (`ps-AF`) RTL: strings belong in the message catalog and styles use logical
   properties. See ADR-0003.

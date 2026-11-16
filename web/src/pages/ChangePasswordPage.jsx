@@ -1,15 +1,23 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Navigate, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { Moon, Sun } from 'lucide-react';
 import { changePassword, selectAuth } from '../features/auth/authSlice.js';
 import { useLogout } from '../features/auth/useLogout.js';
 import { messageFor } from '../i18n/messages.js';
+import { supportedLanguages } from '../i18n/index.js';
+import { useLanguageSwitch, useTheme } from '../providers/AppProviders.jsx';
+import { Alert, Button, Field, IconButton, Input } from '../components/ui.jsx';
 
 export default function ChangePasswordPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const logout = useLogout();
+  const { t } = useTranslation();
   const { user, error } = useSelector(selectAuth);
+  const { theme, toggleTheme } = useTheme();
+  const { current, setLanguage } = useLanguageSwitch();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newPasswordConfirmation, setNewPasswordConfirmation] = useState('');
@@ -35,25 +43,40 @@ export default function ChangePasswordPage() {
 
   return (
     <main className="auth-layout auth-layout-single">
+      <div className="auth-controls">
+        <select
+          className="control-select"
+          aria-label={t('nav.language')}
+          value={current}
+          onChange={(event) => setLanguage(event.target.value)}
+        >
+          {supportedLanguages.map((language) => (
+            <option key={language.code} value={language.code}>
+              {t(language.labelKey)}
+            </option>
+          ))}
+        </select>
+        <IconButton label={theme === 'dark' ? t('nav.light') : t('nav.dark')} onClick={toggleTheme}>
+          {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+        </IconButton>
+      </div>
+
       <section className="auth-panel">
         <div className="auth-card">
-          <p className="eyebrow">First sign-in</p>
-          <h1 className="auth-title">Replace your temporary password</h1>
-          <p className="muted">
-            {user?.name}, your account still uses the temporary password issued by the school.
-            Choose a private password with at least 8 characters before continuing.
-          </p>
+          <p className="eyebrow">{t('auth.changePassword')}</p>
+          <h1 className="auth-title">{t('auth.replaceTemporary')}</h1>
+          <p className="muted">{t('auth.replaceTemporaryCopy', { name: user?.name ?? '' })}</p>
 
           {error ? (
-            <div className="alert alert-danger" role="alert">
-              {messageFor(error.messageKey, error.message)}
-            </div>
+            <Alert tone="danger">{messageFor(error.messageKey, error.message)}</Alert>
           ) : null}
 
           <form onSubmit={handleSubmit} noValidate>
-            <label className="field">
-              <span className="field-label">Current temporary password</span>
-              <input
+            <Field
+              label={t('auth.currentPassword')}
+              error={error?.fields?.currentPassword ? messageFor(error.fields.currentPassword) : null}
+            >
+              <Input
                 type="password"
                 name="currentPassword"
                 autoComplete="current-password"
@@ -62,14 +85,14 @@ export default function ChangePasswordPage() {
                 required
                 autoFocus
               />
-              {error?.fields?.currentPassword ? (
-                <span className="field-error">{messageFor(error.fields.currentPassword)}</span>
-              ) : null}
-            </label>
+            </Field>
 
-            <label className="field">
-              <span className="field-label">New password</span>
-              <input
+            <Field
+              label={t('auth.newPassword')}
+              hint={t('auth.passwordSecurityHint')}
+              error={error?.fields?.newPassword ? messageFor(error.fields.newPassword) : null}
+            >
+              <Input
                 type="password"
                 name="newPassword"
                 autoComplete="new-password"
@@ -78,14 +101,13 @@ export default function ChangePasswordPage() {
                 minLength={8}
                 required
               />
-              {error?.fields?.newPassword ? (
-                <span className="field-error">{messageFor(error.fields.newPassword)}</span>
-              ) : null}
-            </label>
+            </Field>
 
-            <label className="field">
-              <span className="field-label">Confirm new password</span>
-              <input
+            <Field
+              label={t('auth.confirmPassword')}
+              error={error?.fields?.newPasswordConfirmation ? messageFor(error.fields.newPasswordConfirmation) : null}
+            >
+              <Input
                 type="password"
                 name="newPasswordConfirmation"
                 autoComplete="new-password"
@@ -94,19 +116,14 @@ export default function ChangePasswordPage() {
                 minLength={8}
                 required
               />
-              {error?.fields?.newPasswordConfirmation ? (
-                <span className="field-error">
-                  {messageFor(error.fields.newPasswordConfirmation)}
-                </span>
-              ) : null}
-            </label>
+            </Field>
 
-            <button type="submit" className="button button-primary button-block" disabled={submitting}>
-              {submitting ? 'Saving…' : 'Save password and continue'}
-            </button>
-            <button type="button" className="button button-quiet button-block" onClick={logout}>
-              Sign out instead
-            </button>
+            <Button type="submit" className="button-block" disabled={submitting}>
+              {submitting ? t('common.saving') : t('auth.saveAndContinue')}
+            </Button>
+            <Button type="button" variant="quiet" className="button-block" onClick={logout}>
+              {t('auth.signOutInstead')}
+            </Button>
           </form>
         </div>
       </section>

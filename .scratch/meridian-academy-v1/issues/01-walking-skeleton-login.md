@@ -30,13 +30,16 @@ Implemented on `ticket/01-walking-skeleton` (2026-11-13).
   shell, dashboard placeholder, read-only Roles screen, forbidden and not-found
   screens, session bootstrap, and axios CSRF/error handling.
 - HTTP-seam API tests run a real PHP server against a disposable SQLite file per
-  test case. `npm run test:api` currently reports 11 passing tests.
-- Playwright smoke scaffold lists two journeys (login + forced change + logout,
-  and Teacher forbidden from Roles); it remains opt-in because it needs a
-  disposable database, a running API/SPA, and a Chromium install.
+  test case. `npm run test:api` currently reports 13 passing tests, including the
+  full domain surface and Student/Guardian/Teacher isolation.
+- The Playwright suite now executes on Chromium and covers five journeys: the
+  Super Admin forced password change plus every staff module, the printable
+  timetable/exam/report-card/receipt/ID-card/class-list surfaces, Teacher RBAC,
+  language/RTL/digits/theme persistence, and Guardian portal isolation. It stays
+  opt-in because it needs a disposable database and running API/SPA servers.
 
-Deviations: the browser suite was not executed here (no Chromium download in
-this environment); the API suite is the hard gate. The first implementation's
-tests shared one database and depended on execution order; each case now gets a
-fresh server/database. `scripts/db.php fresh` was also fixed to delete the
-SQLite file before opening a PDO connection, which Windows requires.
+Update (2026-11-16): the browser suite was executed successfully against a
+rebuilt `storage/e2e.sqlite` (5 passing journeys); the API suite passes 13/13,
+`php scripts/lint-php.php` passes 56 files, and the production SPA build
+succeeds. `scripts/db.php fresh` deletes the SQLite file before opening a PDO
+connection, which Windows requires.

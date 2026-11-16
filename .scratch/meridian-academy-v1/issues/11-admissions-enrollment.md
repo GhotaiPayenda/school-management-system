@@ -4,12 +4,18 @@
 
 **Blocked by:** 05 (Grade Levels, Sections, and Rooms), 10 (Students, Guardians, and documents)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A Registrar can create, edit, and list Applicants without creating a Student record.
-- [ ] Admitting an Applicant creates the Student and first Enrollment in a chosen Section, and the Applicant records the admission decision.
-- [ ] A Registrar can bulk-enroll existing Students into a Section, and duplicate active Enrollments for the same Student and Academic Year are rejected.
-- [ ] A mid-year Section transfer closes the old Enrollment and creates the new one while preserving history.
-- [ ] Withdrawal, transfer-out, and re-admission each move the Student through the correct Enrollment status, and re-admission creates a new Enrollment rather than reviving the old one.
-- [ ] Enrolling into a Section over capacity produces a warning, and the Student profile shows every Enrollment in order.
-- [ ] API and browser tests cover admission, bulk enrollment, duplicate rejection, transfer, withdrawal, re-admission, capacity warnings, and permission denial.
+- [x] A Registrar can create, edit, and list Applicants without creating a Student record.
+- [x] Admitting an Applicant creates the Student and first Enrollment in a chosen Section, and the Applicant records the admission decision.
+- [x] A Registrar can bulk-enroll existing Students into a Section, and duplicate active Enrollments for the same Student and Academic Year are rejected.
+- [x] A mid-year Section transfer closes the old Enrollment and creates the new one while preserving history.
+- [x] Withdrawal, transfer-out, and re-admission each move the Student through the correct Enrollment status, and re-admission creates a new Enrollment rather than reviving the old one.
+- [x] Enrolling into a Section over capacity produces a warning, and the Student profile shows every Enrollment in order.
+- [x] API and browser tests cover admission, bulk enrollment, duplicate rejection, transfer, withdrawal, re-admission, capacity warnings, and permission denial.
+
+## Comments
+
+- Applicants, admission decisions, bulk enrollment, section transfer, withdrawal, transfer-out, re-admission, capacity warnings, and enrollment history are implemented in `PeopleController` and `AdmissionsPage`.
+- Duplicate active enrollments for the same student and year are rejected; old enrollments are closed rather than deleted.
+- The API suite and admin admissions journey exercise the module.

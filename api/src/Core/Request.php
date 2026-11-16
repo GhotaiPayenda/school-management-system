@@ -118,7 +118,9 @@ final class Request
 
     public function input(string $key, mixed $default = null): mixed
     {
-        return $this->body[$key] ?? $default;
+        // JSON bodies win, but read-only screens send filters in the query
+        // string. Falling back keeps GET and POST handlers on one contract.
+        return $this->body[$key] ?? $this->query[$key] ?? $default;
     }
 
     public function isStateChanging(): bool

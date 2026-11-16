@@ -4,13 +4,19 @@
 
 **Blocked by:** 11 (Admissions and Enrollment), 19 (Fee structures)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] An Accountant can generate draft Invoices for a Billing Period for all active Enrollments, using the Grade Level's active Fee Structure.
-- [ ] Draft generation is idempotent: generating again does not create a second Invoice for the same Student and Billing Period.
-- [ ] A preview shows each Student's Fee Components, discounts if present, total, and due date before issue.
-- [ ] Issuing assigns a sequential Invoice number, sets the due date to the configured day, and moves the Invoice to issued status.
-- [ ] The admission fee appears on the first Invoice, and the exam fee appears on the first Invoice of the relevant Semester.
-- [ ] A never-invoiced view lists active Students without an Invoice for the selected Billing Period.
-- [ ] Invoice lists support filtering by Billing Period, Grade Level, Section, and status.
-- [ ] API and browser tests cover generation, idempotency, preview totals, numbering, due dates, component placement, never-invoiced, and permission denial.
+- [x] An Accountant can generate draft Invoices for a Billing Period for all active Enrollments, using the Grade Level's active Fee Structure.
+- [x] Draft generation is idempotent: generating again does not create a second Invoice for the same Student and Billing Period.
+- [x] A preview shows each Student's Fee Components, discounts if present, total, and due date before issue.
+- [x] Issuing assigns a sequential Invoice number, sets the due date to the configured day, and moves the Invoice to issued status.
+- [x] The admission fee appears on the first Invoice, and the exam fee appears on the first Invoice of the relevant Semester.
+- [x] A never-invoiced view lists active Students without an Invoice for the selected Billing Period.
+- [x] Invoice lists support filtering by Billing Period, Grade Level, Section, and status.
+- [x] API and browser tests cover generation, idempotency, preview totals, numbering, due dates, component placement, never-invoiced, and permission denial.
+
+## Comments
+
+- Invoice generation is idempotent per student/billing period, previews components and due dates, assigns sequential numbers on issue, and places admission and semester exam fees on the correct first invoice.
+- Invoice lists filter by billing period, grade, section, and status, and a never-invoiced view lists missing active students.
+- `FinancePage` exposes generation, preview, issue, and never-invoiced views.

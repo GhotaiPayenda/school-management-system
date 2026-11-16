@@ -1,12 +1,21 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Navigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { Moon, Sun } from 'lucide-react';
 import { login, selectAuth } from '../features/auth/authSlice.js';
 import { messageFor } from '../i18n/messages.js';
+import { supportedLanguages } from '../i18n/index.js';
+import { useLanguageSwitch, useSchool, useTheme } from '../providers/AppProviders.jsx';
+import { Alert, Button, Field, IconButton, Input } from '../components/ui.jsx';
 
 export default function LoginPage() {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   const { status, initialized, user, error } = useSelector(selectAuth);
+  const { school } = useSchool();
+  const { theme, toggleTheme } = useTheme();
+  const { current, setLanguage } = useLanguageSwitch();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -24,35 +33,47 @@ export default function LoginPage() {
 
   return (
     <main className="auth-layout">
-      <section className="auth-brand" aria-label="Meridian Academy">
+      <div className="auth-controls">
+        <select
+          className="control-select"
+          aria-label={t('nav.language')}
+          value={current}
+          onChange={(event) => setLanguage(event.target.value)}
+        >
+          {supportedLanguages.map((language) => (
+            <option key={language.code} value={language.code}>
+              {t(language.labelKey)}
+            </option>
+          ))}
+        </select>
+        <IconButton label={theme === 'dark' ? t('nav.light') : t('nav.dark')} onClick={toggleTheme}>
+          {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+        </IconButton>
+      </div>
+
+      <section className="auth-brand" aria-label={school?.name || 'Meridian Academy'}>
         <div>
           <span className="brand-mark brand-mark-large" aria-hidden="true">M</span>
-          <p className="auth-eyebrow">Meridian Academy</p>
-          <h1 className="auth-display">A calmer way to run a school.</h1>
-          <p className="auth-lead">
-            One workspace for academic records, attendance, results, finance, and the library —
-            built for the way Meridian actually teaches.
-          </p>
+          <p className="auth-eyebrow">{school?.name || t('app.name')}</p>
+          <h1 className="auth-display">{t('auth.brandTitle')}</h1>
+          <p className="auth-lead">{t('auth.brandLead')}</p>
         </div>
-        <p className="auth-footnote">Self-hosted · English · Dari · Pashto</p>
+        <p className="auth-footnote">{t('auth.brandFootnote')}</p>
       </section>
 
       <section className="auth-panel">
         <div className="auth-card">
-          <p className="eyebrow">Welcome back</p>
-          <h2 className="auth-title">Sign in</h2>
-          <p className="muted">Use the account created for you by the school office.</p>
+          <p className="eyebrow">{t('auth.welcomeBack')}</p>
+          <h2 className="auth-title">{t('auth.signIn')}</h2>
+          <p className="muted">{t('auth.signInCopy')}</p>
 
           {error ? (
-            <div className="alert alert-danger" role="alert">
-              {messageFor(error.messageKey, error.message)}
-            </div>
+            <Alert tone="danger">{messageFor(error.messageKey, error.message)}</Alert>
           ) : null}
 
           <form onSubmit={handleSubmit} noValidate>
-            <label className="field">
-              <span className="field-label">Email</span>
-              <input
+            <Field label={t('auth.email')} error={error?.fields?.email ? messageFor(error.fields.email) : null}>
+              <Input
                 type="email"
                 name="email"
                 autoComplete="username"
@@ -61,14 +82,10 @@ export default function LoginPage() {
                 required
                 autoFocus
               />
-              {error?.fields?.email ? (
-                <span className="field-error">{messageFor(error.fields.email)}</span>
-              ) : null}
-            </label>
+            </Field>
 
-            <label className="field">
-              <span className="field-label">Password</span>
-              <input
+            <Field label={t('auth.password')} error={error?.fields?.password ? messageFor(error.fields.password) : null}>
+              <Input
                 type="password"
                 name="password"
                 autoComplete="current-password"
@@ -76,20 +93,14 @@ export default function LoginPage() {
                 onChange={(event) => setPassword(event.target.value)}
                 required
               />
-              {error?.fields?.password ? (
-                <span className="field-error">{messageFor(error.fields.password)}</span>
-              ) : null}
-            </label>
+            </Field>
 
-            <button type="submit" className="button button-primary button-block" disabled={submitting}>
-              {submitting ? 'Signing in…' : 'Sign in'}
-            </button>
+            <Button type="submit" className="button-block" disabled={submitting}>
+              {submitting ? t('auth.signingIn') : t('auth.signIn')}
+            </Button>
           </form>
 
-          <p className="auth-hint">
-            First run? The seeded Super Admin credentials are in the repository README. You will be
-            asked to replace the temporary password immediately.
-          </p>
+          <p className="auth-hint">{t('auth.firstRunHint')}</p>
         </div>
       </section>
     </main>

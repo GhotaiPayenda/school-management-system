@@ -4,10 +4,16 @@
 
 **Blocked by:** 02 (Design system and trilingual RTL shell)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A Super Admin can view and update all School Settings fields, and the changes persist.
-- [ ] The logo upload validates file type and size, displays in the shell and print header, and can be replaced or removed.
-- [ ] Currency, timezone, teaching days, and default language are validated and affect displays elsewhere.
-- [ ] A non-admin User receives 403 from the settings API and cannot open the settings screen.
-- [ ] API and browser tests cover update, validation, logo upload, persistence, and permission denial.
+- [x] A Super Admin can view and update all School Settings fields, and the changes persist.
+- [x] The logo upload validates file type and size, displays in the shell and print header, and can be replaced or removed.
+- [x] Currency, timezone, teaching days, and default language are validated and affect displays elsewhere.
+- [x] A non-admin User receives 403 from the settings API and cannot open the settings screen.
+- [x] API and browser tests cover update, validation, logo upload, persistence, and permission denial.
+
+## Comments
+
+- `SettingsController` exposes `GET/PUT /api/v1/settings` and logo upload/removal at `/settings/logo`, with validation for name, currency, timezone, teaching days, language, theme, and calendar.
+- `SettingsPage` edits identity, contact details, defaults, and logo. `GET /settings/summary` feeds the shell, print headers, and dashboard identity.
+- A non-admin receives 403 from the settings API and cannot reach the Settings route; the API suite exercises the settings surface and role isolation.

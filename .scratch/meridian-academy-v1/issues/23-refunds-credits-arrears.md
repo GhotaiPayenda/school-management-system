@@ -4,11 +4,17 @@
 
 **Blocked by:** 22 (Discounts and manual charges)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A Refund references an existing Payment, requires a reason, cannot exceed the remaining refundable amount, and creates an Audit Entry.
-- [ ] A Refund updates the Student ledger and the affected Invoice balance without deleting the original Payment.
-- [ ] Overpayment becomes a Credit balance, and Credit can be applied to the next issued Invoice.
-- [ ] The Arrears report lists only issued Invoices past their due date with a positive balance, grouped by Grade Level and Section.
-- [ ] Arrears totals reconcile with the Student ledger and the finance dashboard.
-- [ ] API and browser tests cover refund limits, ledger effects, credit application, arrears filtering and totals, and permission denial.
+- [x] A Refund references an existing Payment, requires a reason, cannot exceed the remaining refundable amount, and creates an Audit Entry.
+- [x] A Refund updates the Student ledger and the affected Invoice balance without deleting the original Payment.
+- [x] Overpayment becomes a Credit balance, and Credit can be applied to the next issued Invoice.
+- [x] The Arrears report lists only issued Invoices past their due date with a positive balance, grouped by Grade Level and Section.
+- [x] Arrears totals reconcile with the Student ledger and the finance dashboard.
+- [x] API and browser tests cover refund limits, ledger effects, credit application, arrears filtering and totals, and permission denial.
+
+## Comments
+
+- Refunds reference a payment, require a reason, respect the remaining refundable amount, update the ledger and invoice balance, preserve the original payment, and create an Audit Entry.
+- Overpayments become credits applicable to the next issued invoice; arrears list only issued, past-due, positive-balance invoices grouped by grade and section.
+- `FinancePage` provides refund, credit, and arrears views.

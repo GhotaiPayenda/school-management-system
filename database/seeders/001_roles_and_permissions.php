@@ -11,6 +11,7 @@ return static function (\PDO $pdo): void {
         'users.manage' => ['Manage users', 'Create, reset, and deactivate User accounts.'],
         'settings.manage' => ['Manage school settings', 'Change school identity, locale, calendar, and policy defaults.'],
         'audit.view' => ['View audit history', 'Read Audit Entries.'],
+        'operations.manage' => ['Manage operations', 'Create and restore backups and inspect system health.'],
         'academic.manage' => ['Manage academic structure', 'Manage Academic Years, Grade Levels, Sections, Subjects, and timetables.'],
         'students.manage' => ['Manage students', 'Create and update Student and Guardian records.'],
         'students.view' => ['View students', 'Read Student records and profiles.'],

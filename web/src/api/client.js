@@ -63,11 +63,29 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+const RETRYABLE_STATUSES = new Set([0, 502, 503, 504]);
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     const normalized = normalizeApiError(error);
     const config = error.config || {};
+    const method = (config.method || 'get').toLowerCase();
+
+    // The development PHP server serves one request at a time. A burst of
+    // reference-data requests can occasionally reset a connection, so retry
+    // safe reads before surfacing a network error to the page.
+    if (
+      config &&
+      ['get', 'head'].includes(method) &&
+      RETRYABLE_STATUSES.has(normalized.status) &&
+      (config.__retryCount ?? 0) < 2
+    ) {
+      config.__retryCount = (config.__retryCount ?? 0) + 1;
+      return new Promise((resolve) => {
+        window.setTimeout(resolve, 250 * config.__retryCount);
+      }).then(() => api(config));
+    }
 
     if (normalized.status === 401 && !config.skipAuthRedirect) {
       window.dispatchEvent(new CustomEvent('meridian:session-expired'));
