@@ -4312,6 +4312,105 @@ html[lang='ps-AF'] .class-fact dt {
   color: var(--ink);
 }
 
+.class-result-kpis {
+  margin-block-end: 1rem;
+}
+
+.result-list {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.result-row {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.7rem;
+  background: var(--surface-muted);
+}
+
+.result-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  inline-size: 100%;
+  padding: 0.7rem 0.85rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.result-summary:hover {
+  background: var(--forest-faint);
+}
+
+.result-summary:focus-visible {
+  outline: 2px solid var(--forest);
+  outline-offset: -2px;
+}
+
+.result-student {
+  display: grid;
+  flex: 1 1 12rem;
+  gap: 0.05rem;
+}
+
+.result-student .muted {
+  font-size: 0.74rem;
+}
+
+.result-metric {
+  display: grid;
+  gap: 0.1rem;
+  min-inline-size: 4.5rem;
+}
+
+.result-label {
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+html[dir='rtl'] .result-label {
+  letter-spacing: 0;
+}
+
+.result-chevron {
+  color: var(--muted);
+  transition: transform 160ms ease;
+}
+
+.result-chevron-open {
+  transform: rotate(180deg);
+}
+
+.result-detail {
+  overflow-x: auto;
+  padding: 0 0.85rem 0.85rem;
+}
+
+.class-subject-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.class-subject-table th,
+.class-subject-table td {
+  padding: 0.4rem 0.5rem;
+  border-block-start: 1px solid var(--border);
+  text-align: start;
+  white-space: nowrap;
+}
+
 .lesson-chip-readonly {
   cursor: default;
 }

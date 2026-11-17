@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ChevronDown } from 'lucide-react';
 import {
   Badge,
   DataTable,
@@ -10,10 +10,12 @@ import {
   ErrorState,
   Input,
   KeyValue,
+  LetterBadge,
   LoadingBlock,
   PageHeader,
   Panel,
   Select,
+  StatCard,
   Tabs,
   TabsContent,
   TabsList,
@@ -42,6 +44,14 @@ function teacherName(teacher, language) {
   return `${teacher.first_name} ${teacher.last_name}`;
 }
 
+function examCell(exam, t, format) {
+  if (!exam) return '—';
+  if (!exam.published) return t('classes.pending');
+  if (exam.isAbsent) return t('classes.absentScore');
+  if (exam.score === null || exam.score === undefined) return '—';
+  return `${format.formatNumber(exam.score, { maximumFractionDigits: 1 })} / ${format.formatInteger(exam.maxScore)}`;
+}
+
 export default function ClassRecordPage() {
   const { id } = useParams();
   const { t } = useTranslation();
@@ -51,11 +61,13 @@ export default function ClassRecordPage() {
   const canViewStudents = permissions.includes('students.view');
   const canManageAcademic = permissions.includes('academic.manage');
   const canViewAttendance = permissions.includes('attendance.view');
+  const canViewResults = permissions.includes('exams.view');
 
   const { data, loading, error, reload } = useApi(`/sections/${id}/profile`);
   const [missingYear, setMissingYear] = useState(null);
   const [attendanceDate, setAttendanceDate] = useState('');
   const [attendanceSemester, setAttendanceSemester] = useState('');
+  const [expandedResult, setExpandedResult] = useState(null);
 
   const attendanceParams = useMemo(() => {
     const params = {};
@@ -74,10 +86,18 @@ export default function ClassRecordPage() {
     enabled: canViewAttendance,
   });
 
+  const {
+    data: results,
+    loading: resultsLoading,
+    error: resultsError,
+    reload: reloadResults,
+  } = useApi(`/sections/${id}/results`, { enabled: canViewResults });
+
   useEffect(() => {
     setMissingYear(null);
     setAttendanceDate('');
     setAttendanceSemester('');
+    setExpandedResult(null);
   }, [id]);
 
   const section = data?.section;
@@ -176,6 +196,27 @@ export default function ClassRecordPage() {
 
   const attendanceDayRows = attendance?.day?.rows ?? [];
   const attendanceStudentById = new Map(attendanceDayRows.map((row) => [row.student_id, row]));
+
+  const resultRows = results?.items ?? [];
+  const resultAverages = resultRows
+    .map((row) => row.average)
+    .filter((value) => value !== null && value !== undefined);
+  const classAverage = resultAverages.length
+    ? resultAverages.reduce((total, value) => total + Number(value), 0) / resultAverages.length
+    : null;
+  const passingStudents = resultRows.filter((row) => row.failedSubjects === 0).length;
+  const failingStudents = resultRows.length - passingStudents;
+  const retentionStudents = resultRows.filter((row) =>
+    (row.subjects ?? []).some((subject) => subject.retention),
+  ).length;
+  const hasPublishedResults = resultRows.some((row) =>
+    (row.subjects ?? []).some(
+      (subject) =>
+        subject.firstExam?.published ||
+        subject.finalExam?.published ||
+        (subject.score !== null && subject.score !== undefined),
+    ),
+  );
 
   const columns = [
     { key: 'admission_number', label: t('people.admissionNumber') },
@@ -594,6 +635,141 @@ export default function ClassRecordPage() {
             </Tabs>
           </>
         ) : null}
+      </Panel>
+
+      <Panel title={t('classes.results')} copy={t('classes.resultsCopy')}>
+        {!canViewResults ? (
+          <EmptyState title={t('classes.resultsUnavailable')} copy={t('classes.resultsUnavailableHint')} />
+        ) : resultsLoading && !results ? (
+          <LoadingBlock rows={5} />
+        ) : resultsError ? (
+          <ErrorState error={resultsError} onRetry={reloadResults} />
+        ) : !hasPublishedResults ? (
+          <EmptyState
+            title={t('classes.noPublishedResults')}
+            copy={t('classes.noPublishedResultsHint')}
+          />
+        ) : (
+          <>
+            <section className="kpi-grid class-result-kpis">
+              <StatCard
+                label={t('classes.classAverage')}
+                value={classAverage === null ? '—' : format.formatNumber(classAverage, { maximumFractionDigits: 1 })}
+                tone="forest"
+              />
+              <StatCard
+                label={t('classes.passRate')}
+                value={resultRows.length === 0 ? '—' : format.formatPercent((passingStudents / resultRows.length) * 100)}
+                tone="forest"
+              />
+              <StatCard
+                label={t('classes.studentsWithFailures')}
+                value={format.formatInteger(failingStudents)}
+                tone="terracotta"
+              />
+              <StatCard
+                label={t('classes.retentionCount')}
+                value={format.formatInteger(retentionStudents)}
+                tone="brass"
+              />
+            </section>
+
+            <ul className="result-list">
+              {resultRows.map((row) => {
+                const expanded = expandedResult === row.student.id;
+                const retention = (row.subjects ?? []).some((subject) => subject.retention);
+                return (
+                  <li key={row.student.id} className="result-row">
+                    <button
+                      type="button"
+                      className="result-summary"
+                      aria-expanded={expanded}
+                      onClick={() => setExpandedResult(expanded ? null : row.student.id)}
+                    >
+                      <span className="result-student">
+                        <strong>{row.student.first_name} {row.student.last_name}</strong>
+                        <span className="muted">{row.student.admission_number}</span>
+                      </span>
+                      <span className="result-metric">
+                        <span className="result-label">{t('results.average')}</span>
+                        <strong>
+                          {row.average === null
+                            ? '—'
+                            : format.formatNumber(row.average, { maximumFractionDigits: 1 })}
+                        </strong>
+                      </span>
+                      <span className="result-metric">
+                        <span className="result-label">{t('results.letterGrade')}</span>
+                        <LetterBadge letter={row.letterGrade} />
+                      </span>
+                      <span className="result-metric">
+                        <span className="result-label">{t('results.retentionSubjects')}</span>
+                        <Badge tone={row.failedSubjects > 0 ? 'warning' : 'success'}>
+                          {format.formatInteger(row.failedSubjects)}
+                        </Badge>
+                      </span>
+                      <span className="result-metric">
+                        <span className="result-label">{t('people.status')}</span>
+                        <Badge tone={row.failedSubjects === 0 ? 'success' : 'danger'}>
+                          {row.failedSubjects === 0 ? t('results.passed') : t('results.failed')}
+                        </Badge>
+                      </span>
+                      {retention ? <Badge tone="danger">{t('results.retention')}</Badge> : null}
+                      <ChevronDown
+                        size={16}
+                        className={`result-chevron${expanded ? ' result-chevron-open' : ''}`}
+                        aria-hidden="true"
+                      />
+                    </button>
+
+                    {expanded ? (
+                      <div className="result-detail">
+                        <table className="class-subject-table">
+                          <thead>
+                            <tr>
+                              <th>{t('classes.subject')}</th>
+                              <th>{t('exam.first')}</th>
+                              <th>{t('exam.final')}</th>
+                              <th>{t('results.supplementary')}</th>
+                              <th>{t('results.annual')}</th>
+                              <th>{t('results.letterGrade')}</th>
+                              <th>{t('people.status')}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(row.subjects ?? []).map((subject) => (
+                              <tr key={subject.subjectId}>
+                                <td>{subjectName(subject, format.language)}</td>
+                                <td>{examCell(subject.firstExam, t, format)}</td>
+                                <td>{examCell(subject.finalExam, t, format)}</td>
+                                <td>
+                                  {subject.supplementaryScore === null || subject.supplementaryScore === undefined
+                                    ? '—'
+                                    : format.formatNumber(subject.supplementaryScore, { maximumFractionDigits: 1 })}
+                                </td>
+                                <td>
+                                  {subject.score === null || subject.score === undefined
+                                    ? '—'
+                                    : format.formatNumber(subject.score, { maximumFractionDigits: 1 })}
+                                </td>
+                                <td><LetterBadge letter={subject.letterGrade} /></td>
+                                <td>
+                                  <Badge tone={subject.passed ? 'success' : 'danger'}>
+                                    {subject.passed ? t('results.passed') : t('results.failed')}
+                                  </Badge>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        )}
       </Panel>
     </div>
   );
