@@ -19,6 +19,7 @@ import {
   Megaphone,
   Menu,
   Moon,
+  School,
   ScrollText,
   ShieldCheck,
   Sun,
@@ -37,7 +38,10 @@ import { Avatar, IconButton } from './ui.jsx';
 const navGroups = [
   {
     key: 'nav.school',
-    items: [{ to: '/', labelKey: 'nav.dashboard', permission: 'dashboard.view', icon: Home, end: true }],
+    items: [
+      { to: '/', labelKey: 'nav.dashboard', permission: 'dashboard.view', icon: Home, end: true },
+      { to: '/classes', labelKey: 'nav.classes', permission: 'academic.view', icon: School },
+    ],
   },
   {
     key: 'nav.academics',

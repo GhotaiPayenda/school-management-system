@@ -19,6 +19,7 @@ use Meridian\Api\Http\Controllers\AnnouncementController;
 use Meridian\Api\Http\Controllers\AttendanceController;
 use Meridian\Api\Http\Controllers\AuditController;
 use Meridian\Api\Http\Controllers\AuthController;
+use Meridian\Api\Http\Controllers\ClassesController;
 use Meridian\Api\Http\Controllers\DashboardController;
 use Meridian\Api\Http\Controllers\ExamController;
 use Meridian\Api\Http\Controllers\FinanceController;
@@ -85,6 +86,7 @@ final class AppFactory
             $dashboard = new DashboardController($pdo);
             $settings = new SettingsController($pdo, $config);
             $academic = new AcademicController($pdo);
+            $classes = new ClassesController($pdo);
             $timetable = new TimetableController($pdo);
             $people = new PeopleController($pdo, $config);
             $attendance = new AttendanceController($pdo);
@@ -130,6 +132,8 @@ final class AppFactory
             $router->get('/api/v1/sections', static fn (Request $request) => $academic->sections($request), $permission('academic.manage'));
             $router->post('/api/v1/sections', static fn (Request $request) => $academic->createSection($request), $permission('academic.manage'));
             $router->put('/api/v1/sections/{id}', static fn (Request $request, array $params) => $academic->updateSection($request, (int) $params['id']), $permission('academic.manage'));
+
+            $router->get('/api/v1/classes', static fn (Request $request) => $classes->index($request), $permission('academic.view'));
 
             $router->get('/api/v1/rooms', static fn (Request $request) => $academic->rooms($request), $permission('academic.manage'));
             $router->post('/api/v1/rooms', static fn (Request $request) => $academic->createRoom($request), $permission('academic.manage'));

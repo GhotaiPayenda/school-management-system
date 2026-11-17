@@ -4073,3 +4073,135 @@ html[dir='rtl'] .role-list-item.is-active {
     inset-inline-end: 0.75rem;
   }
 }
+
+/* Classes list */
+.class-year-filter {
+  min-inline-size: 14rem;
+}
+
+.class-year-groups {
+  display: grid;
+  gap: 1.6rem;
+}
+
+.class-year-group {
+  display: grid;
+  gap: 1rem;
+}
+
+.class-year-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  padding-block-end: 0.55rem;
+  border-block-end: 1px solid var(--border);
+}
+
+.class-year-title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 500;
+}
+
+.class-grade-group {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.class-grade-title {
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+html[lang='fa-AF'] .class-grade-title,
+html[lang='ps-AF'] .class-grade-title {
+  letter-spacing: 0;
+}
+
+.class-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: 0.9rem;
+}
+
+.class-card {
+  display: grid;
+  align-content: start;
+  gap: 0.8rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface-muted);
+}
+
+.class-card-over {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+
+.class-card-head {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.class-card-title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.class-card-year {
+  font-size: 0.78rem;
+}
+
+.class-card-warnings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.class-card-warnings:empty {
+  display: none;
+}
+
+.class-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem 0.85rem;
+  margin: 0;
+  padding-block-start: 0.7rem;
+  border-block-start: 1px solid var(--border);
+}
+
+.class-fact {
+  display: grid;
+  gap: 0.1rem;
+  min-inline-size: 0;
+}
+
+.class-fact dt {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+html[lang='fa-AF'] .class-fact dt,
+html[lang='ps-AF'] .class-fact dt {
+  letter-spacing: 0;
+}
+
+.class-fact dd {
+  margin: 0;
+  font-size: 0.86rem;
+  overflow-wrap: anywhere;
+}
+
+.class-fact-wide {
+  grid-column: 1 / -1;
+}

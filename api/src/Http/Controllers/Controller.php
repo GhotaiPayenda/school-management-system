@@ -108,7 +108,8 @@ abstract class Controller
     protected function pagination(Request $request, int $defaultPerPage = 25): array
     {
         $page = max(1, (int) ($request->query['page'] ?? 1));
-        $perPage = min(100, max(1, (int) ($request->query['perPage'] ?? $defaultPerPage)));
+        $pageSize = $request->query['perPage'] ?? $request->query['pageSize'] ?? $defaultPerPage;
+        $perPage = min(100, max(1, (int) $pageSize));
 
         return ['page' => $page, 'perPage' => $perPage, 'offset' => ($page - 1) * $perPage];
     }

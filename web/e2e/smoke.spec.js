@@ -50,9 +50,11 @@ test('Super Admin signs in, changes the temporary password, and opens every modu
   await expectPageHealthy(page);
 
   await expect(page.getByRole('navigation', { name: 'Main navigation' })).toContainText('Dashboard');
+  await expect(page.getByRole('navigation', { name: 'Main navigation' })).toContainText('Classes');
   await expect(page.getByRole('navigation', { name: 'Main navigation' })).toContainText('Roles & access');
 
   const modules = [
+    ['/classes', 'Classes'],
     ['/academic', 'Academic setup'],
     ['/timetable', 'Timetable'],
     ['/admissions', 'Admissions & enrollment'],
@@ -75,6 +77,12 @@ test('Super Admin signs in, changes the temporary password, and opens every modu
     await expect(page.locator('.page-title')).toContainText(title);
     await expectPageHealthy(page);
   }
+
+  await page.goto('/classes');
+  await expectPageHealthy(page);
+  await expect.poll(() => page.locator('.class-year-group').count()).toBeGreaterThan(0);
+  await expect.poll(() => page.locator('.class-grade-group').count()).toBeGreaterThan(0);
+  await expect.poll(() => page.locator('.class-card').count()).toBeGreaterThan(0);
 
   await page.goto('/settings');
   await expect(page.locator('input[name="name"], .settings-layout input').first()).toBeVisible();

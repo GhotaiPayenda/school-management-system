@@ -135,6 +135,17 @@ export async function startTestServer() {
 }
 
 /**
+ * Runs a PHP script against a running test server's database and storage.
+ */
+export function runPhpScript(server, script) {
+  return runPhp([script], {
+    MERIDIAN_ENV: 'test',
+    MERIDIAN_DB_PATH: server.dbPath,
+    MERIDIAN_STORAGE_PATH: server.storagePath,
+  });
+}
+
+/**
  * Rebuilds the database behind a running test server. The server opens a new
  * PDO connection per request, so it observes the rebuilt schema and seed data.
  */
