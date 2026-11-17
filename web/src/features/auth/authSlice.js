@@ -145,7 +145,7 @@ const authSlice = createSlice({
       .addCase(changePassword.rejected, (state, action) => {
         state.error = action.payload || null;
       })
-      .addCase(logout.pending, (state) => {
+      .addCase(logout.fulfilled, (state) => {
         state.status = 'anonymous';
         state.user = null;
         state.role = null;

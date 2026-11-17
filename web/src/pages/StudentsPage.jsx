@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { FileDown, FileUp, Plus, Printer, Trash2, UserRound } from 'lucide-react';
 import { api } from '../api/client.js';
 import { useReference } from '../providers/ReferenceProvider.jsx';
@@ -57,6 +58,21 @@ export default function StudentsPage() {
   const [classListOpen, setClassListOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const fileRef = useRef(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const studentParam = searchParams.get('studentId');
+
+  useEffect(() => {
+    if (studentParam && /^\d+$/.test(studentParam)) setDetailId(Number(studentParam));
+  }, [studentParam]);
+
+  const closeDetail = useCallback(() => {
+    setDetailId(null);
+    if (studentParam) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('studentId');
+      setSearchParams(next, { replace: true });
+    }
+  }, [studentParam, searchParams, setSearchParams]);
 
   const fields = useMemo(
     () => [
@@ -200,7 +216,7 @@ export default function StudentsPage() {
         onSubmit={submit}
       />
 
-      <StudentDetailModal studentId={detailId} onClose={() => setDetailId(null)} onChanged={reload} />
+      <StudentDetailModal studentId={detailId} onClose={closeDetail} onChanged={reload} />
       <IdCardModal studentId={idCardId} onClose={() => setIdCardId(null)} />
       <ClassListModal
         sectionId={section}

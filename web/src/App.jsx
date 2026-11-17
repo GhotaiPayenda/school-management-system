@@ -11,6 +11,7 @@ import AttendancePage from './pages/AttendancePage.jsx';
 import AuditPage from './pages/AuditPage.jsx';
 import ChangePasswordPage from './pages/ChangePasswordPage.jsx';
 import ClassesPage from './pages/ClassesPage.jsx';
+import ClassRecordPage from './pages/ClassRecordPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import ExamsPage from './pages/ExamsPage.jsx';
 import FinancePage from './pages/FinancePage.jsx';
@@ -58,6 +59,7 @@ export default function App() {
           <Route index element={<HomeRoute />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="classes" element={guarded('academic.view', <ClassesPage />)} />
+          <Route path="classes/:id" element={guarded('academic.view', <ClassRecordPage />)} />
           <Route path="academic" element={guarded('academic.manage', <AcademicPage />)} />
           <Route path="timetable" element={guarded('academic.manage', <TimetablePage />)} />
           <Route path="admissions" element={guarded('admissions.manage', <AdmissionsPage />)} />

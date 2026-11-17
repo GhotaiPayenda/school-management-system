@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { AlertTriangle } from 'lucide-react';
 import {
   Badge,
@@ -12,20 +13,7 @@ import {
 } from '../components/ui.jsx';
 import { useApi } from '../lib/useApi.js';
 import { useFormat } from '../lib/format.js';
-
-function localizedGrade(entry, language) {
-  if (language === 'fa-AF') return entry.grade_name_fa || entry.grade_name;
-  if (language === 'ps-AF') return entry.grade_name_ps || entry.grade_name;
-  return entry.grade_name;
-}
-
-function yearLabel(year, format) {
-  if (!year) return '—';
-  if (!format.eastern) return year.label || '—';
-  const start = format.formatDate(year.start_date, { year: 'numeric' });
-  const end = format.formatDate(year.end_date, { year: 'numeric' });
-  return start === end ? start : `${start} – ${end}`;
-}
+import { localizedGrade, yearLabel } from '../lib/classes.js';
 
 function buildGroups(classes, yearsById, language) {
   const yearMap = new Map();
@@ -164,7 +152,12 @@ function ClassCard({ entry, year }) {
   const atCapacity = entry.active_students === entry.capacity;
 
   return (
-    <article className={`class-card${overCapacity ? ' class-card-over' : ''}`} data-class-id={entry.id}>
+    <Link
+      to={`/classes/${entry.id}`}
+      className={`class-card${overCapacity ? ' class-card-over' : ''}`}
+      data-class-id={entry.id}
+      aria-label={t('classes.openClass', { name: entry.name })}
+    >
       <div className="class-card-head">
         <p className="eyebrow">{grade}</p>
         <h4 className="class-card-title">{t('classes.className', { name: entry.name })}</h4>
@@ -231,6 +224,6 @@ function ClassCard({ entry, year }) {
           <dd>{entry.attendance_rate === null ? t('classes.notRecorded') : format.formatPercent(entry.attendance_rate)}</dd>
         </div>
       </dl>
-    </article>
+    </Link>
   );
 }

@@ -166,4 +166,156 @@ final class ClassesController extends Controller
             'classes' => $classes,
         ]);
     }
+
+    public function profile(Request $request, int $sectionId): Response
+    {
+        $section = $this->fetchOne(
+            'SELECT s.id, s.name, s.academic_year_id, s.grade_level_id, s.capacity, s.homeroom_teacher_id,
+                    g.number AS grade_number, g.name AS grade_name,
+                    g.name_fa AS grade_name_fa, g.name_ps AS grade_name_ps,
+                    y.label AS academic_year_label, y.start_date AS academic_year_start_date,
+                    y.end_date AS academic_year_end_date, y.is_current AS is_current_year,
+                    st.first_name || \' \' || st.last_name AS homeroom_teacher_name
+             FROM sections s
+             JOIN grade_levels g ON g.id = s.grade_level_id
+             JOIN academic_years y ON y.id = s.academic_year_id
+             LEFT JOIN staff st ON st.id = s.homeroom_teacher_id
+             WHERE s.id = :id',
+            ['id' => $sectionId],
+        );
+
+        if ($section === null) {
+            throw HttpException::notFound('academic.sectionNotFound', 'Section not found.');
+        }
+
+        $this->sectionAccess->assertAccess($this->user($request), $sectionId);
+
+        $yearId = (int) $section['academic_year_id'];
+        $gradeId = (int) $section['grade_level_id'];
+
+        $students = $this->fetchAll(
+            'SELECT st.id, st.admission_number, st.first_name, st.last_name,
+                    st.name_fa, st.name_ps, st.gender, st.status AS student_status,
+                    e.id AS enrollment_id, e.status AS enrollment_status,
+                    e.started_at, e.ended_at
+             FROM enrollments e
+             JOIN students st ON st.id = e.student_id
+             WHERE e.section_id = :section
+             ORDER BY CASE e.status WHEN \'active\' THEN 0 ELSE 1 END, st.last_name ASC, st.first_name ASC',
+            ['section' => $sectionId],
+        );
+
+        $activeStudents = 0;
+        $inactiveStudents = 0;
+        $studentRows = array_map(static function (array $row) use (&$activeStudents, &$inactiveStudents): array {
+            $isActive = $row['enrollment_status'] === 'active';
+            if ($isActive) {
+                $activeStudents++;
+            } else {
+                $inactiveStudents++;
+            }
+
+            return [
+                'id' => (int) $row['id'],
+                'admission_number' => $row['admission_number'],
+                'first_name' => $row['first_name'],
+                'last_name' => $row['last_name'],
+                'name_fa' => $row['name_fa'],
+                'name_ps' => $row['name_ps'],
+                'gender' => $row['gender'],
+                'student_status' => $row['student_status'],
+                'enrollment_id' => (int) $row['enrollment_id'],
+                'enrollment_status' => $row['enrollment_status'],
+                'started_at' => $row['started_at'],
+                'ended_at' => $row['ended_at'],
+            ];
+        }, $students);
+
+        $counts = $this->fetchOne(
+            'SELECT
+                (SELECT COUNT(*) FROM curriculum c
+                 WHERE c.academic_year_id = :subject_year AND c.grade_level_id = :subject_grade) AS subject_count,
+                (SELECT COUNT(*) FROM curriculum c
+                 WHERE c.academic_year_id = :unassigned_year AND c.grade_level_id = :unassigned_grade
+                   AND NOT EXISTS (
+                       SELECT 1 FROM teaching_assignments ta
+                       WHERE ta.section_id = :unassigned_section AND ta.subject_id = c.subject_id
+                         AND ta.academic_year_id = :unassigned_year_match
+                   )) AS unassigned_subject_count,
+                (SELECT COUNT(DISTINCT ta.teacher_staff_id) FROM teaching_assignments ta
+                 WHERE ta.section_id = :teacher_section) AS teacher_count',
+            [
+                'subject_year' => $yearId,
+                'subject_grade' => $gradeId,
+                'unassigned_year' => $yearId,
+                'unassigned_grade' => $gradeId,
+                'unassigned_section' => $sectionId,
+                'unassigned_year_match' => $yearId,
+                'teacher_section' => $sectionId,
+            ],
+        );
+
+        $siblings = $this->fetchAll(
+            'SELECT s.id, s.academic_year_id, y.label AS academic_year_label,
+                    y.start_date, y.is_current
+             FROM sections s
+             JOIN academic_years y ON y.id = s.academic_year_id
+             WHERE s.grade_level_id = :sibling_grade AND s.name = :sibling_name AND s.id <> :sibling_section
+             ORDER BY y.start_date DESC, s.id DESC',
+            [
+                'sibling_grade' => $gradeId,
+                'sibling_name' => $section['name'],
+                'sibling_section' => $sectionId,
+            ],
+        );
+
+        $years = $this->fetchAll(
+            'SELECT id, label, start_date, end_date, is_current FROM academic_years ORDER BY start_date DESC, id DESC',
+        );
+
+        return Response::json([
+            'section' => [
+                'id' => (int) $section['id'],
+                'name' => $section['name'],
+                'academic_year_id' => $yearId,
+                'academic_year_label' => $section['academic_year_label'],
+                'academic_year_start_date' => $section['academic_year_start_date'],
+                'academic_year_end_date' => $section['academic_year_end_date'],
+                'is_current_year' => (int) $section['is_current_year'],
+                'grade_level_id' => $gradeId,
+                'grade_number' => (int) $section['grade_number'],
+                'grade_name' => $section['grade_name'],
+                'grade_name_fa' => $section['grade_name_fa'],
+                'grade_name_ps' => $section['grade_name_ps'],
+                'capacity' => (int) $section['capacity'],
+                'homeroom_teacher_id' => $section['homeroom_teacher_id'] === null ? null : (int) $section['homeroom_teacher_id'],
+                'homeroom_teacher_name' => $section['homeroom_teacher_name'] === null
+                    ? null
+                    : trim((string) $section['homeroom_teacher_name']),
+            ],
+            'counts' => [
+                'active_students' => $activeStudents,
+                'inactive_students' => $inactiveStudents,
+                'capacity' => (int) $section['capacity'],
+                'subject_count' => (int) ($counts['subject_count'] ?? 0),
+                'unassigned_subject_count' => (int) ($counts['unassigned_subject_count'] ?? 0),
+                'teacher_count' => (int) ($counts['teacher_count'] ?? 0),
+            ],
+            'academic_years' => array_map(static fn (array $year): array => [
+                'id' => (int) $year['id'],
+                'label' => $year['label'],
+                'start_date' => $year['start_date'],
+                'end_date' => $year['end_date'],
+                'is_current' => (int) $year['is_current'],
+            ], $years),
+            'siblings' => array_map(static fn (array $row): array => [
+                'id' => (int) $row['id'],
+                'academic_year_id' => (int) $row['academic_year_id'],
+                'academic_year_label' => $row['academic_year_label'],
+                'start_date' => $row['start_date'],
+                'is_current' => (int) $row['is_current'],
+            ], $siblings),
+            'students' => $studentRows,
+        ]);
+    }
 }

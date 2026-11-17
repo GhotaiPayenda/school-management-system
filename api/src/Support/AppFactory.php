@@ -134,6 +134,7 @@ final class AppFactory
             $router->put('/api/v1/sections/{id}', static fn (Request $request, array $params) => $academic->updateSection($request, (int) $params['id']), $permission('academic.manage'));
 
             $router->get('/api/v1/classes', static fn (Request $request) => $classes->index($request), $permission('academic.view'));
+    $router->get('/api/v1/sections/{id}/profile', static fn (Request $request, array $params) => $classes->profile($request, (int) $params['id']), $permission('academic.view'));
 
             $router->get('/api/v1/rooms', static fn (Request $request) => $academic->rooms($request), $permission('academic.manage'));
             $router->post('/api/v1/rooms', static fn (Request $request) => $academic->createRoom($request), $permission('academic.manage'));

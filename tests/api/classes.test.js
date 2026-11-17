@@ -184,3 +184,83 @@ test('pageSize is an alias of perPage in the shared pagination reader', async ()
     assert.equal(byPageSize.items.length, size);
   }
 });
+
+test('a class record returns the header, counts, sibling years, and the roster split', async () => {
+  const { response, json } = await admin.get(`/api/v1/sections/${fixture.sectionC}/profile`);
+  assert.equal(response.status, 200, JSON.stringify(json));
+
+  const { section, counts, students, academic_years: years, siblings } = json.data;
+
+  assert.equal(section.id, fixture.sectionC);
+  assert.equal(section.name, 'C');
+  assert.equal(section.grade_number, 9);
+  assert.equal(section.academic_year_id, fixture.currentYearId);
+  assert.equal(section.academic_year_label, fixture.currentYearLabel);
+  assert.equal(section.capacity, 3);
+  assert.equal(section.homeroom_teacher_name, 'Wahid Sultani');
+
+  assert.equal(counts.active_students, 3);
+  assert.equal(counts.inactive_students, 1);
+  assert.equal(counts.capacity, 3);
+  assert.equal(counts.subject_count, 3);
+  assert.equal(counts.unassigned_subject_count, 1);
+  assert.equal(counts.teacher_count, 1);
+
+  assert.equal(students.length, 4);
+  assert.deepEqual(
+    students.map((student) => student.enrollment_status).sort(),
+    ['active', 'active', 'active', 'withdrawn'],
+  );
+  assert.deepEqual(
+    students.slice(0, 3).map((student) => student.enrollment_status),
+    ['active', 'active', 'active'],
+  );
+  const withdrawn = students.find((student) => student.enrollment_status === 'withdrawn');
+  assert.equal(withdrawn.ended_at, '2026-06-01');
+
+  assert.ok(years.some((year) => year.id === fixture.currentYearId));
+  assert.ok(years.some((year) => year.id === fixture.pastYearId));
+  assert.ok(years.some((year) => year.id === fixture.emptyYearId));
+  assert.deepEqual(siblings, [], 'the only Grade 9 C Section is the one being read');
+});
+
+test('a class record links siblings by Grade Level and class name across years', async () => {
+  const past = (await admin.get(`/api/v1/sections/${fixture.sectionZ}/profile`)).json.data;
+  assert.deepEqual(
+    past.siblings.map((sibling) => sibling.id),
+    [fixture.sectionZCurrent],
+  );
+  assert.equal(past.siblings[0].academic_year_id, fixture.currentYearId);
+
+  const current = (await admin.get(`/api/v1/sections/${fixture.sectionZCurrent}/profile`)).json.data;
+  assert.deepEqual(
+    current.siblings.map((sibling) => sibling.id),
+    [fixture.sectionZ],
+  );
+  assert.equal(current.siblings[0].academic_year_id, fixture.pastYearId);
+});
+
+test('a class record is scoped to owning Teachers and hidden from portal Roles', async () => {
+  const teacherTwo = await signIn(fixture.teacherTwoEmail, fixture.teacherPassword);
+  assert.equal((await teacherTwo.get(`/api/v1/sections/${fixture.sectionC}/profile`)).response.status, 200);
+  assert.equal((await teacherTwo.get(`/api/v1/sections/${fixture.sectionZ}/profile`)).response.status, 200);
+  assert.equal((await teacherTwo.get(`/api/v1/sections/${fixture.sectionD}/profile`)).response.status, 403);
+
+  const teacherThree = await signIn(fixture.teacherThreeEmail, fixture.teacherPassword);
+  assert.equal((await teacherThree.get(`/api/v1/sections/${fixture.sectionD}/profile`)).response.status, 200);
+  assert.equal((await teacherThree.get(`/api/v1/sections/${fixture.sectionC}/profile`)).response.status, 403);
+
+  for (const [email, password] of [
+    ['student.demo@meridian.academy', DEMO_PASSWORD],
+    ['guardian.demo@meridian.academy', DEMO_PASSWORD],
+  ]) {
+    const client = await signIn(email, password);
+    assert.equal((await client.get(`/api/v1/sections/${fixture.sectionC}/profile`)).response.status, 403);
+  }
+});
+
+test('an unknown Section has no class record', async () => {
+  const { response, json } = await admin.get('/api/v1/sections/999999/profile');
+  assert.equal(response.status, 404);
+  assert.equal(json.error.code, 'not_found');
+});

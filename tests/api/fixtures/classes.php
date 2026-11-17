@@ -136,6 +136,14 @@ $sectionZ = $insert('sections', [
     'created_at' => $now,
     'updated_at' => $now,
 ]);
+$sectionZCurrent = $insert('sections', [
+    'academic_year_id' => $currentYearId,
+    'grade_level_id' => $grade12,
+    'name' => 'Z',
+    'capacity' => 5,
+    'created_at' => $now,
+    'updated_at' => $now,
+]);
 
 $periodOne = $insert('periods', [
     'section_id' => $sectionC,
@@ -282,6 +290,7 @@ echo json_encode([
     'sectionC' => $sectionC,
     'sectionD' => $sectionD,
     'sectionZ' => $sectionZ,
+    'sectionZCurrent' => $sectionZCurrent,
     'teacherTwoEmail' => 'classes.teacher@meridian.academy',
     'teacherThreeEmail' => 'classes.other@meridian.academy',
     'teacherPassword' => 'Meridian@2026',

@@ -4138,6 +4138,44 @@ html[lang='ps-AF'] .class-grade-title {
   background: var(--surface-muted);
 }
 
+a.class-card {
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+a.class-card:hover {
+  border-color: var(--forest);
+  box-shadow: var(--shadow-soft);
+  transform: translateY(-1px);
+}
+
+a.class-card:focus-visible {
+  outline: 2px solid var(--forest);
+  outline-offset: 2px;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  inline-size: fit-content;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  color: var(--forest);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  a.class-card {
+    transition: none;
+  }
+}
+
 .class-card-over {
   border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
 }

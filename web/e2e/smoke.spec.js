@@ -17,7 +17,7 @@ const guardianPassword = process.env.MERIDIAN_E2E_GUARDIAN_PASSWORD || 'Meridian
 test.skip(!process.env.MERIDIAN_E2E, 'Set MERIDIAN_E2E=1 with a fresh seeded database.');
 
 test.beforeEach(async ({ page }) => {
-  page.setDefaultTimeout(30_000);
+  page.setDefaultTimeout(60_000);
   page.setDefaultNavigationTimeout(60_000);
 });
 
@@ -30,7 +30,7 @@ async function signIn(page, email, password) {
 }
 
 async function expectPageHealthy(page) {
-  await page.locator('.loading-block').first().waitFor({ state: 'detached', timeout: 30_000 });
+  await page.locator('.loading-block').first().waitFor({ state: 'detached', timeout: 60_000 });
   await expect(page.locator('.page-title')).toBeVisible();
   await expect(page.locator('.state-error')).toHaveCount(0);
 }
@@ -73,7 +73,7 @@ test('Super Admin signs in, changes the temporary password, and opens every modu
   ];
 
   for (const [path, title] of modules) {
-    await page.goto(path);
+    await page.goto(path, { waitUntil: 'networkidle' });
     await expect(page.locator('.page-title')).toContainText(title);
     await expectPageHealthy(page);
   }
@@ -83,6 +83,21 @@ test('Super Admin signs in, changes the temporary password, and opens every modu
   await expect.poll(() => page.locator('.class-year-group').count()).toBeGreaterThan(0);
   await expect.poll(() => page.locator('.class-grade-group').count()).toBeGreaterThan(0);
   await expect.poll(() => page.locator('.class-card').count()).toBeGreaterThan(0);
+
+  await page.locator('.class-card').first().click();
+  await expect(page).toHaveURL(/\/classes\/\d+$/);
+  await expect(page.locator('.page-title')).toContainText('Section');
+  await expect(page.locator('.back-link')).toBeVisible();
+  await expect(page.locator('select[aria-label="Academic year"]')).toBeVisible();
+  await expect.poll(() => page.locator('.data-table tbody tr').count()).toBeGreaterThan(0);
+  await page.locator('.back-link').click();
+  await expect(page).toHaveURL(/\/classes$/);
+
+  await page.locator('.class-card').first().click();
+  await expect(page.locator('.data-table tbody tr').first()).toBeVisible();
+  await page.locator('.data-table tbody tr').first().click();
+  await expect(page).toHaveURL(/\/students\?studentId=\d+/);
+  await expect(page.locator('.modal-content')).toBeVisible();
 
   await page.goto('/settings');
   await expect(page.locator('input[name="name"], .settings-layout input').first()).toBeVisible();

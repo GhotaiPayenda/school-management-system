@@ -7,6 +7,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    watch: {
+      ignored: ['**/playwright-report/**', '**/test-results/**'],
+    },
     proxy: {
       '/api': {
         target: apiTarget,
