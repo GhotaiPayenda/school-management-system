@@ -30,6 +30,11 @@ abstract class Controller
         return $context->user;
     }
 
+    protected function can(Request $request, string $permission): bool
+    {
+        return AuthMiddleware::context($request)->hasPermission($permission);
+    }
+
     protected function queryString(Request $request, string $key, ?string $default = null): ?string
     {
         $value = $request->query[$key] ?? $default;

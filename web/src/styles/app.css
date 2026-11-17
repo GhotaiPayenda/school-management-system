@@ -4285,6 +4285,33 @@ html[lang='ps-AF'] .class-fact dt {
   font-size: 0.74rem;
 }
 
+.attendance-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.attendance-controls .field {
+  min-inline-size: 10rem;
+}
+
+.attendance-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  margin-block-end: 0.9rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 0.7rem;
+  background: var(--surface-muted);
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+}
+
+.attendance-totals strong {
+  color: var(--ink);
+}
+
 .lesson-chip-readonly {
   cursor: default;
 }

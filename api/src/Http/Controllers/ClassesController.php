@@ -401,4 +401,247 @@ final class ClassesController extends Controller
             'students' => $studentRows,
         ]);
     }
+
+    public function attendance(Request $request, int $sectionId): Response
+    {
+        $section = $this->fetchOne(
+            'SELECT s.id, s.academic_year_id, y.label AS academic_year_label,
+                    y.start_date AS academic_year_start_date, y.end_date AS academic_year_end_date
+             FROM sections s
+             JOIN academic_years y ON y.id = s.academic_year_id
+             WHERE s.id = :id',
+            ['id' => $sectionId],
+        );
+
+        if ($section === null) {
+            throw HttpException::notFound('academic.sectionNotFound', 'Section not found.');
+        }
+
+        $this->sectionAccess->assertAccess($this->user($request), $sectionId);
+
+        if (!$this->can($request, 'attendance.view')) {
+            throw HttpException::forbidden('attendance.forbidden', 'You do not have permission to read attendance.');
+        }
+
+        $yearStart = (string) $section['academic_year_start_date'];
+        $yearEnd = (string) $section['academic_year_end_date'];
+        $today = date('Y-m-d');
+
+        $semesters = $this->fetchAll(
+            'SELECT id, number, name, start_date, end_date FROM semesters
+             WHERE academic_year_id = :year ORDER BY number ASC',
+            ['year' => (int) $section['academic_year_id']],
+        );
+
+        $requestedDate = $this->queryString($request, 'date');
+        if ($requestedDate !== null && preg_match('/^\d{4}-\d{2}-\d{2}$/', $requestedDate) !== 1) {
+            throw HttpException::validation(['date' => 'validation.invalid']);
+        }
+
+        $defaulted = false;
+        if ($requestedDate !== null) {
+            $date = $requestedDate;
+        } else {
+            $date = $today;
+            $latest = $this->fetchOne(
+                'SELECT MAX(date) AS latest FROM attendance_records
+                 WHERE section_id = :section AND date BETWEEN :from AND :to AND date <= :today',
+                ['section' => $sectionId, 'from' => $yearStart, 'to' => $yearEnd, 'today' => $today],
+            );
+            $latestDate = $latest['latest'] ?? null;
+            $inYear = $today >= $yearStart && $today <= $yearEnd;
+            $teachingDays = TimetableGrid::teachingDays($this->db);
+            $isTeachingDay = in_array((int) date('w'), $teachingDays, true);
+            $todayRecorded = $this->fetchOne(
+                'SELECT 1 AS found FROM attendance_records WHERE section_id = :section AND date = :date LIMIT 1',
+                ['section' => $sectionId, 'date' => $today],
+            ) !== null;
+
+            if (!$inYear) {
+                $date = $latestDate ?? ($today < $yearStart ? $yearStart : $yearEnd);
+            } elseif (!$isTeachingDay || !$todayRecorded) {
+                $date = $latestDate ?? $today;
+            }
+
+            $defaulted = $date !== $today;
+        }
+
+        $semesterId = $this->queryString($request, 'semesterId');
+        $semester = null;
+        if ($semesterId !== null) {
+            if (!ctype_digit($semesterId)) {
+                throw HttpException::validation(['semesterId' => 'validation.invalid']);
+            }
+            foreach ($semesters as $candidate) {
+                if ((int) $candidate['id'] === (int) $semesterId) {
+                    $semester = $candidate;
+                    break;
+                }
+            }
+            if ($semester === null) {
+                throw HttpException::validation(['semesterId' => 'validation.invalid']);
+            }
+        } else {
+            foreach ($semesters as $candidate) {
+                if ($date >= $candidate['start_date'] && $date <= $candidate['end_date']) {
+                    $semester = $candidate;
+                    break;
+                }
+            }
+            if ($semester === null && $semesters !== []) {
+                $semester = $semesters[count($semesters) - 1];
+            }
+        }
+
+        $from = $semester['start_date'] ?? $yearStart;
+        $to = $semester['end_date'] ?? $yearEnd;
+
+        $collapsed = $this->fetchAll(
+            'SELECT student_id, date,
+                    COALESCE(
+                        MAX(CASE WHEN period_id IS NULL THEN status END),
+                        CASE
+                            WHEN SUM(CASE WHEN status = \'absent\' THEN 1 ELSE 0 END) > 0 THEN \'absent\'
+                            WHEN SUM(CASE WHEN status = \'late\' THEN 1 ELSE 0 END) > 0 THEN \'late\'
+                            WHEN SUM(CASE WHEN status = \'excused\' THEN 1 ELSE 0 END) > 0 THEN \'excused\'
+                            ELSE \'present\'
+                        END
+                    ) AS collapsed_status
+             FROM attendance_records
+             WHERE section_id = :section AND date BETWEEN :from AND :to
+             GROUP BY student_id, date',
+            ['section' => $sectionId, 'from' => $from, 'to' => $to],
+        );
+
+        $counts = [];
+        foreach ($collapsed as $row) {
+            $studentId = (int) $row['student_id'];
+            $counts[$studentId] ??= ['present' => 0, 'absent' => 0, 'late' => 0, 'excused' => 0];
+            $counts[$studentId][$row['collapsed_status']]++;
+        }
+
+        $students = $this->fetchAll(
+            'SELECT st.id, st.admission_number, st.first_name, st.last_name, st.name_fa, st.name_ps
+             FROM enrollments e
+             JOIN students st ON st.id = e.student_id
+             WHERE e.section_id = :section AND e.status = \'active\'
+             ORDER BY st.last_name ASC, st.first_name ASC',
+            ['section' => $sectionId],
+        );
+
+        $dayRecords = $this->fetchAll(
+            'SELECT student_id, status, reason, period_id FROM attendance_records
+             WHERE section_id = :section AND date = :date',
+            ['section' => $sectionId, 'date' => $date],
+        );
+        $severity = ['present' => 1, 'excused' => 2, 'late' => 3, 'absent' => 4];
+        $dayStatus = [];
+        foreach ($dayRecords as $record) {
+            $studentId = (int) $record['student_id'];
+            if (!isset($dayStatus[$studentId])) {
+                $dayStatus[$studentId] = ['status' => null, 'reason' => null, 'daily' => false];
+            }
+            if ($record['period_id'] === null) {
+                $dayStatus[$studentId] = [
+                    'status' => $record['status'],
+                    'reason' => $record['reason'],
+                    'daily' => true,
+                ];
+                continue;
+            }
+            $current = $dayStatus[$studentId];
+            if ($current['daily']) {
+                continue;
+            }
+            if ($current['status'] === null || $severity[$record['status']] > $severity[$current['status']]) {
+                $dayStatus[$studentId] = [
+                    'status' => $record['status'],
+                    'reason' => $record['reason'],
+                    'daily' => false,
+                ];
+            }
+        }
+
+        $dayRows = [];
+        $summaryRows = [];
+        $totals = ['present' => 0, 'absent' => 0, 'late' => 0, 'excused' => 0];
+
+        foreach ($students as $student) {
+            $studentId = (int) $student['id'];
+            $studentCounts = $counts[$studentId] ?? ['present' => 0, 'absent' => 0, 'late' => 0, 'excused' => 0];
+            $studentTotal = array_sum($studentCounts);
+            foreach ($studentCounts as $status => $count) {
+                $totals[$status] += $count;
+            }
+
+            $dayRows[] = [
+                'student_id' => $studentId,
+                'admission_number' => $student['admission_number'],
+                'first_name' => $student['first_name'],
+                'last_name' => $student['last_name'],
+                'name_fa' => $student['name_fa'],
+                'name_ps' => $student['name_ps'],
+                'status' => $dayStatus[$studentId]['status'] ?? null,
+                'reason' => $dayStatus[$studentId]['reason'] ?? null,
+            ];
+
+            $summaryRows[] = [
+                'student_id' => $studentId,
+                'present' => $studentCounts['present'],
+                'absent' => $studentCounts['absent'],
+                'late' => $studentCounts['late'],
+                'excused' => $studentCounts['excused'],
+                'total' => $studentTotal,
+                'attendance_rate' => $studentTotal === 0
+                    ? null
+                    : round((($studentCounts['present'] + $studentCounts['late']) / $studentTotal) * 100, 1),
+            ];
+        }
+
+        $total = array_sum($totals);
+        $semesterRow = $semester === null ? null : [
+            'id' => (int) $semester['id'],
+            'number' => (int) $semester['number'],
+            'name' => $semester['name'],
+            'start_date' => $semester['start_date'],
+            'end_date' => $semester['end_date'],
+        ];
+
+        return Response::json([
+            'date' => $date,
+            'defaulted' => $defaulted,
+            'has_records' => $total > 0,
+            'academic_year' => [
+                'id' => (int) $section['academic_year_id'],
+                'label' => $section['academic_year_label'],
+                'start_date' => $yearStart,
+                'end_date' => $yearEnd,
+            ],
+            'semesters' => array_map(static fn (array $row): array => [
+                'id' => (int) $row['id'],
+                'number' => (int) $row['number'],
+                'name' => $row['name'],
+                'start_date' => $row['start_date'],
+                'end_date' => $row['end_date'],
+            ], $semesters),
+            'semester' => $semesterRow,
+            'day' => [
+                'has_records' => $dayRecords !== [],
+                'rows' => $dayRows,
+            ],
+            'summary' => [
+                'section' => [
+                    'present' => $totals['present'],
+                    'absent' => $totals['absent'],
+                    'late' => $totals['late'],
+                    'excused' => $totals['excused'],
+                    'total' => $total,
+                    'attendance_rate' => $total === 0
+                        ? null
+                        : round((($totals['present'] + $totals['late']) / $total) * 100, 1),
+                ],
+                'students' => $summaryRows,
+            ],
+        ]);
+    }
 }

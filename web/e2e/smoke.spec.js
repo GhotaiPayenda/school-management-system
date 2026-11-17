@@ -93,6 +93,8 @@ test('Super Admin signs in, changes the temporary password, and opens every modu
   await expect(page.getByRole('heading', { name: 'Teachers', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Subjects', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Timetable', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Attendance', exact: true })).toBeVisible();
+  await expect(page.locator('input[type="date"]').first()).toBeVisible();
   await page.locator('.back-link').click();
   await expect(page).toHaveURL(/\/classes$/);
 

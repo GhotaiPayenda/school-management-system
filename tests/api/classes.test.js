@@ -302,6 +302,98 @@ test('a class record distinguishes an empty period grid and unstaffed teaching',
   assert.ok(data.timetable.teachingDays.length > 0);
 });
 
+test('a class attendance view resolves the date and collapses per-period records', async () => {
+  const { response, json } = await admin.get(`/api/v1/sections/${fixture.sectionC}/attendance`);
+  assert.equal(response.status, 200, JSON.stringify(json));
+
+  const data = json.data;
+  assert.equal(data.date, '2026-04-02', 'the default is the most recent recorded date');
+  assert.equal(data.defaulted, true);
+  assert.equal(data.semester.number, 1);
+  assert.equal(data.day.has_records, true);
+  assert.equal(data.day.rows.length, 3);
+
+  const statusByAdmission = new Map(data.day.rows.map((row) => [row.admission_number, row.status]));
+  assert.equal(statusByAdmission.get('CLS-C-001'), 'absent');
+  assert.equal(statusByAdmission.get('CLS-C-002'), 'late');
+  assert.equal(statusByAdmission.get('CLS-C-003'), 'excused');
+
+  assert.deepEqual(data.summary.section, {
+    present: 1,
+    absent: 2,
+    late: 2,
+    excused: 1,
+    total: 6,
+    attendance_rate: 50,
+  });
+
+  const idByAdmission = new Map(data.day.rows.map((row) => [row.admission_number, row.student_id]));
+  const summaryFor = (admission) =>
+    data.summary.students.find((row) => row.student_id === idByAdmission.get(admission));
+
+  assert.deepEqual(
+    { present: summaryFor('CLS-C-001').present, absent: summaryFor('CLS-C-001').absent, total: summaryFor('CLS-C-001').total },
+    { present: 1, absent: 1, total: 2 },
+  );
+  assert.equal(summaryFor('CLS-C-002').late, 2, 'both days collapse to late');
+  assert.equal(summaryFor('CLS-C-002').attendance_rate, 100);
+  assert.equal(summaryFor('CLS-C-003').attendance_rate, 0);
+
+  const dayOne = (await admin.get(`/api/v1/sections/${fixture.sectionC}/attendance?date=2026-04-01`)).json.data;
+  assert.equal(dayOne.date, '2026-04-01');
+  assert.equal(dayOne.defaulted, false, 'an explicit date is honoured');
+  const dayOneStatuses = new Map(dayOne.day.rows.map((row) => [row.admission_number, row.status]));
+  assert.equal(dayOneStatuses.get('CLS-C-001'), 'present');
+  assert.equal(dayOneStatuses.get('CLS-C-002'), 'late');
+  assert.equal(dayOneStatuses.get('CLS-C-003'), 'absent');
+});
+
+test('a class attendance view reports an empty Semester truthfully', async () => {
+  const data = (await admin.get(`/api/v1/sections/${fixture.sectionC}/attendance`)).json.data;
+  const semesterTwo = data.semesters.find((semester) => semester.number === 2);
+  assert.ok(semesterTwo);
+
+  const selected = (await admin.get(
+    `/api/v1/sections/${fixture.sectionC}/attendance?semesterId=${semesterTwo.id}`,
+  )).json.data;
+
+  assert.equal(selected.semester.number, 2);
+  assert.equal(selected.has_records, false);
+  assert.equal(selected.summary.section.total, 0);
+  assert.equal(selected.summary.section.attendance_rate, null);
+  assert.ok(selected.summary.students.every((row) => row.total === 0 && row.attendance_rate === null));
+});
+
+test('a class attendance view handles a Section with no records and a past year without Semesters', async () => {
+  const empty = (await admin.get(`/api/v1/sections/${fixture.sectionD}/attendance`)).json.data;
+  assert.equal(empty.summary.section.total, 0);
+  assert.equal(empty.summary.section.attendance_rate, null);
+  assert.ok(empty.day.rows.length > 0);
+  assert.ok(empty.day.rows.every((row) => row.status === null), 'no record means no status');
+
+  const past = (await admin.get(`/api/v1/sections/${fixture.sectionZ}/attendance`)).json.data;
+  assert.equal(past.date, '2020-04-01');
+  assert.equal(past.defaulted, true);
+  assert.equal(past.semester, null);
+  assert.equal(past.summary.section.present, 1);
+  assert.equal(past.summary.section.attendance_rate, 100);
+});
+
+test('a class attendance view requires attendance access and Section ownership', async () => {
+  const principal = await signIn('principal.demo@meridian.academy', DEMO_PASSWORD);
+  assert.equal((await principal.get(`/api/v1/sections/${fixture.sectionC}/attendance`)).response.status, 200);
+
+  const accountant = await signIn('accountant.demo@meridian.academy', DEMO_PASSWORD);
+  assert.equal((await accountant.get(`/api/v1/sections/${fixture.sectionC}/attendance`)).response.status, 403);
+
+  const teacherTwo = await signIn(fixture.teacherTwoEmail, fixture.teacherPassword);
+  assert.equal((await teacherTwo.get(`/api/v1/sections/${fixture.sectionC}/attendance`)).response.status, 200);
+  assert.equal((await teacherTwo.get(`/api/v1/sections/${fixture.sectionD}/attendance`)).response.status, 403);
+
+  const student = await signIn('student.demo@meridian.academy', DEMO_PASSWORD);
+  assert.equal((await student.get(`/api/v1/sections/${fixture.sectionC}/attendance`)).response.status, 403);
+});
+
 test('an unknown Section has no class record', async () => {
   const { response, json } = await admin.get('/api/v1/sections/999999/profile');
   assert.equal(response.status, 404);

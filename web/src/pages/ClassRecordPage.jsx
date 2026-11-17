@@ -8,6 +8,7 @@ import {
   DataTable,
   EmptyState,
   ErrorState,
+  Input,
   KeyValue,
   LoadingBlock,
   PageHeader,
@@ -49,12 +50,34 @@ export default function ClassRecordPage() {
   const { permissions } = useSelector(selectAuth);
   const canViewStudents = permissions.includes('students.view');
   const canManageAcademic = permissions.includes('academic.manage');
+  const canViewAttendance = permissions.includes('attendance.view');
 
   const { data, loading, error, reload } = useApi(`/sections/${id}/profile`);
   const [missingYear, setMissingYear] = useState(null);
+  const [attendanceDate, setAttendanceDate] = useState('');
+  const [attendanceSemester, setAttendanceSemester] = useState('');
+
+  const attendanceParams = useMemo(() => {
+    const params = {};
+    if (attendanceDate) params.date = attendanceDate;
+    if (attendanceSemester) params.semesterId = attendanceSemester;
+    return params;
+  }, [attendanceDate, attendanceSemester]);
+
+  const {
+    data: attendance,
+    loading: attendanceLoading,
+    error: attendanceError,
+    reload: reloadAttendance,
+  } = useApi(`/sections/${id}/attendance`, {
+    params: attendanceParams,
+    enabled: canViewAttendance,
+  });
 
   useEffect(() => {
     setMissingYear(null);
+    setAttendanceDate('');
+    setAttendanceSemester('');
   }, [id]);
 
   const section = data?.section;
@@ -150,6 +173,9 @@ export default function ClassRecordPage() {
   const selectedYear = missingYear ?? section.academic_year_id;
   const missingYearLabel = years.find((year) => year.id === missingYear)?.label ?? '';
   const yearEntry = years.find((year) => year.id === section.academic_year_id);
+
+  const attendanceDayRows = attendance?.day?.rows ?? [];
+  const attendanceStudentById = new Map(attendanceDayRows.map((row) => [row.student_id, row]));
 
   const columns = [
     { key: 'admission_number', label: t('people.admissionNumber') },
@@ -416,6 +442,158 @@ export default function ClassRecordPage() {
             </table>
           </div>
         )}
+      </Panel>
+
+      <Panel
+        title={t('classes.attendance')}
+        copy={t('classes.attendanceCopy')}
+        actions={
+          canViewAttendance && attendance ? (
+            <div className="attendance-controls">
+              <label className="field">
+                <span className="field-label">{t('attendance.date')}</span>
+                <Input
+                  type="date"
+                  value={attendanceDate || attendance.date}
+                  onChange={(event) => setAttendanceDate(event.target.value)}
+                />
+              </label>
+              {attendance.semesters.length > 0 ? (
+                <label className="field">
+                  <span className="field-label">{t('classes.semester')}</span>
+                  <Select
+                    value={attendanceSemester || attendance.semester?.id || ''}
+                    onChange={(event) => setAttendanceSemester(event.target.value)}
+                  >
+                    {attendance.semesters.map((semester) => (
+                      <option key={semester.id} value={semester.id}>{semester.name}</option>
+                    ))}
+                  </Select>
+                </label>
+              ) : null}
+            </div>
+          ) : null
+        }
+      >
+        {!canViewAttendance ? (
+          <EmptyState
+            title={t('classes.attendanceUnavailable')}
+            copy={t('classes.attendanceUnavailableHint')}
+          />
+        ) : attendanceLoading && !attendance ? (
+          <LoadingBlock rows={4} />
+        ) : attendanceError ? (
+          <ErrorState error={attendanceError} onRetry={reloadAttendance} />
+        ) : attendance && !attendance.has_records ? (
+          <EmptyState title={t('classes.noAttendance')} copy={t('classes.noAttendanceHint')} />
+        ) : attendance ? (
+          <>
+            <div className="attendance-totals">
+              <span>
+                {t('attendance.present')}: <strong>{format.formatInteger(attendance.summary.section.present)}</strong>
+              </span>
+              <span>
+                {t('attendance.absent')}: <strong>{format.formatInteger(attendance.summary.section.absent)}</strong>
+              </span>
+              <span>
+                {t('attendance.late')}: <strong>{format.formatInteger(attendance.summary.section.late)}</strong>
+              </span>
+              <span>
+                {t('attendance.excused')}: <strong>{format.formatInteger(attendance.summary.section.excused)}</strong>
+              </span>
+              <span>
+                {t('attendance.rate')}:{' '}
+                <strong>
+                  {attendance.summary.section.attendance_rate === null
+                    ? t('classes.notRecorded')
+                    : format.formatPercent(attendance.summary.section.attendance_rate)}
+                </strong>
+              </span>
+            </div>
+
+            <Tabs defaultValue="day">
+              <TabsList>
+                <TabsTrigger value="day">{t('classes.dayView')}</TabsTrigger>
+                <TabsTrigger value="summary">{t('classes.semesterSummary')}</TabsTrigger>
+              </TabsList>
+              <TabsContent value="day">
+                <DataTable
+                  columns={[
+                    {
+                      key: 'student',
+                      label: t('people.student'),
+                      render: (row) => studentName(row, format.language),
+                    },
+                    {
+                      key: 'status',
+                      label: t('people.status'),
+                      render: (row) => (row.status
+                        ? <Badge status={row.status} />
+                        : <span className="muted">{t('classes.notRecorded')}</span>),
+                    },
+                    {
+                      key: 'reason',
+                      label: t('attendance.reason'),
+                      render: (row) => row.reason || '—',
+                    },
+                  ]}
+                  rows={attendanceDayRows}
+                  rowKey="student_id"
+                  empty={<EmptyState title={t('classes.noActiveStudents')} copy={t('classes.noActiveStudentsHint')} />}
+                />
+              </TabsContent>
+              <TabsContent value="summary">
+                <DataTable
+                  columns={[
+                    {
+                      key: 'student',
+                      label: t('people.student'),
+                      render: (row) => {
+                        const student = attendanceStudentById.get(row.student_id);
+                        return student ? studentName(student, format.language) : '—';
+                      },
+                    },
+                    {
+                      key: 'present',
+                      label: t('attendance.present'),
+                      align: 'end',
+                      render: (row) => format.formatInteger(row.present),
+                    },
+                    {
+                      key: 'absent',
+                      label: t('attendance.absent'),
+                      align: 'end',
+                      render: (row) => format.formatInteger(row.absent),
+                    },
+                    {
+                      key: 'late',
+                      label: t('attendance.late'),
+                      align: 'end',
+                      render: (row) => format.formatInteger(row.late),
+                    },
+                    {
+                      key: 'excused',
+                      label: t('attendance.excused'),
+                      align: 'end',
+                      render: (row) => format.formatInteger(row.excused),
+                    },
+                    {
+                      key: 'attendance_rate',
+                      label: t('attendance.rate'),
+                      align: 'end',
+                      render: (row) => (row.attendance_rate === null
+                        ? t('classes.notRecorded')
+                        : format.formatPercent(row.attendance_rate)),
+                    },
+                  ]}
+                  rows={attendance.summary.students}
+                  rowKey="student_id"
+                  empty={<EmptyState title={t('classes.noActiveStudents')} copy={t('classes.noActiveStudentsHint')} />}
+                />
+              </TabsContent>
+            </Tabs>
+          </>
+        ) : null}
       </Panel>
     </div>
   );
