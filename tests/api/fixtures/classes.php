@@ -195,15 +195,27 @@ $insert('curriculum', [
 ]);
 
 // Section C teaches Maths and Dari but leaves English unassigned.
+$mathAssignmentC = null;
 foreach (['MATH', 'DARI'] as $code) {
-    $insert('teaching_assignments', [
+    $assignmentId = $insert('teaching_assignments', [
         'teacher_staff_id' => $teacherTwo,
         'subject_id' => $subjectIds[$code],
         'section_id' => $sectionC,
         'academic_year_id' => $currentYearId,
         'created_at' => $now,
     ]);
+    if ($code === 'MATH') {
+        $mathAssignmentC = $assignmentId;
+    }
 }
+$insert('lessons', [
+    'section_id' => $sectionC,
+    'period_id' => $periodOne,
+    'teaching_assignment_id' => $mathAssignmentC,
+    'day_of_week' => 0,
+    'room_id' => null,
+    'created_at' => $now,
+]);
 $insert('teaching_assignments', [
     'teacher_staff_id' => $teacherThree,
     'subject_id' => $subjectIds['MATH'],
@@ -291,6 +303,7 @@ echo json_encode([
     'sectionD' => $sectionD,
     'sectionZ' => $sectionZ,
     'sectionZCurrent' => $sectionZCurrent,
+    'periodOne' => $periodOne,
     'teacherTwoEmail' => 'classes.teacher@meridian.academy',
     'teacherThreeEmail' => 'classes.other@meridian.academy',
     'teacherPassword' => 'Meridian@2026',

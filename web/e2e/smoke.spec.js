@@ -90,6 +90,9 @@ test('Super Admin signs in, changes the temporary password, and opens every modu
   await expect(page.locator('.back-link')).toBeVisible();
   await expect(page.locator('select[aria-label="Academic year"]')).toBeVisible();
   await expect.poll(() => page.locator('.data-table tbody tr').count()).toBeGreaterThan(0);
+  await expect(page.getByRole('heading', { name: 'Teachers', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Subjects', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Timetable', exact: true })).toBeVisible();
   await page.locator('.back-link').click();
   await expect(page).toHaveURL(/\/classes$/);
 

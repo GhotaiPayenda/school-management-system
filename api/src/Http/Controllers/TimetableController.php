@@ -7,6 +7,7 @@ namespace Meridian\Api\Http\Controllers;
 use Meridian\Api\Core\HttpException;
 use Meridian\Api\Core\Request;
 use Meridian\Api\Core\Response;
+use Meridian\Api\Support\TimetableGrid;
 use PDO;
 
 final class TimetableController extends Controller
@@ -272,28 +273,11 @@ final class TimetableController extends Controller
     public function sectionTimetable(Request $request, int $sectionId): Response
     {
         $section = $this->section($sectionId);
-        $periods = $this->fetchAll('SELECT * FROM periods WHERE section_id = :id ORDER BY sort_order', ['id' => $sectionId]);
-        $lessons = $this->fetchAll(
-            'SELECT l.*, p.start_time, p.end_time, s.code AS subject_code, s.name AS subject_name,
-                    st.first_name, st.last_name, r.name AS room_name
-             FROM lessons l JOIN periods p ON p.id = l.period_id
-             JOIN teaching_assignments a ON a.id = l.teaching_assignment_id
-             JOIN subjects s ON s.id = a.subject_id JOIN staff st ON st.id = a.teacher_staff_id
-             LEFT JOIN rooms r ON r.id = l.room_id
-             WHERE l.section_id = :id',
-            ['id' => $sectionId],
-        );
-        $grid = [];
-        foreach ($lessons as $lesson) {
-            $grid[$lesson['period_id']][$lesson['day_of_week']] = $lesson;
-        }
 
-        return Response::json([
-            'section' => $section,
-            'periods' => $periods,
-            'lessons' => $grid,
-            'teachingDays' => $this->teachingDays(),
-        ]);
+        return Response::json(array_merge(
+            ['section' => $section],
+            TimetableGrid::forSection($this->db, $sectionId),
+        ));
     }
 
     public function teacherTimetable(Request $request, int $staffId): Response
@@ -382,10 +366,7 @@ final class TimetableController extends Controller
      */
     private function teachingDays(): array
     {
-        $settings = $this->fetchOne('SELECT teaching_days FROM school_settings WHERE id = 1');
-        $days = json_decode((string) ($settings['teaching_days'] ?? '[6,0,1,2,3,4]'), true);
-
-        return is_array($days) ? array_map('intval', $days) : [6, 0, 1, 2, 3, 4];
+        return TimetableGrid::teachingDays($this->db);
     }
 
     private function assertNoLessonConflicts(int $sectionId, int $assignmentId, ?int $roomId, int $day, array $period, ?int $ignoreId = null): void

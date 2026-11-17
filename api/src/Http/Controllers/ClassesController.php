@@ -8,6 +8,7 @@ use Meridian\Api\Access\SectionAccess;
 use Meridian\Api\Core\HttpException;
 use Meridian\Api\Core\Request;
 use Meridian\Api\Core\Response;
+use Meridian\Api\Support\TimetableGrid;
 use PDO;
 
 /**
@@ -273,6 +274,85 @@ final class ClassesController extends Controller
             'SELECT id, label, start_date, end_date, is_current FROM academic_years ORDER BY start_date DESC, id DESC',
         );
 
+        $assignmentRows = $this->fetchAll(
+            'SELECT a.teacher_staff_id, st.first_name, st.last_name, st.name_fa, st.name_ps,
+                    s.id AS subject_id, s.code, s.name AS subject_name,
+                    s.name_fa AS subject_name_fa, s.name_ps AS subject_name_ps
+             FROM teaching_assignments a
+             JOIN staff st ON st.id = a.teacher_staff_id
+             JOIN subjects s ON s.id = a.subject_id
+             WHERE a.section_id = :assignment_section AND a.academic_year_id = :assignment_year
+             ORDER BY st.last_name ASC, st.first_name ASC, s.name ASC',
+            ['assignment_section' => $sectionId, 'assignment_year' => $yearId],
+        );
+
+        $homeroomId = $section['homeroom_teacher_id'] === null ? 0 : (int) $section['homeroom_teacher_id'];
+        $teacherMap = [];
+        foreach ($assignmentRows as $row) {
+            $staffId = (int) $row['teacher_staff_id'];
+            if (!isset($teacherMap[$staffId])) {
+                $teacherMap[$staffId] = [
+                    'staff_id' => $staffId,
+                    'first_name' => $row['first_name'],
+                    'last_name' => $row['last_name'],
+                    'name_fa' => $row['name_fa'],
+                    'name_ps' => $row['name_ps'],
+                    'is_homeroom' => $staffId === $homeroomId,
+                    'subjects' => [],
+                ];
+            }
+            $teacherMap[$staffId]['subjects'][] = [
+                'id' => (int) $row['subject_id'],
+                'code' => $row['code'],
+                'name' => $row['subject_name'],
+                'name_fa' => $row['subject_name_fa'],
+                'name_ps' => $row['subject_name_ps'],
+            ];
+        }
+
+        $teachers = array_values($teacherMap);
+        usort($teachers, static function (array $left, array $right): int {
+            if ($left['is_homeroom'] !== $right['is_homeroom']) {
+                return $left['is_homeroom'] ? -1 : 1;
+            }
+
+            return [$left['last_name'], $left['first_name']] <=> [$right['last_name'], $right['first_name']];
+        });
+
+        $curriculumRows = $this->fetchAll(
+            'SELECT c.subject_id, c.weekly_periods, c.is_elective,
+                    s.code, s.name AS subject_name, s.name_fa AS subject_name_fa, s.name_ps AS subject_name_ps,
+                    (SELECT ta.teacher_staff_id FROM teaching_assignments ta
+                     WHERE ta.section_id = :curriculum_teacher_section AND ta.subject_id = c.subject_id
+                       AND ta.academic_year_id = c.academic_year_id ORDER BY ta.id LIMIT 1) AS teacher_staff_id,
+                    (SELECT st2.first_name || \' \' || st2.last_name FROM teaching_assignments ta
+                     JOIN staff st2 ON st2.id = ta.teacher_staff_id
+                     WHERE ta.section_id = :curriculum_name_section AND ta.subject_id = c.subject_id
+                       AND ta.academic_year_id = c.academic_year_id ORDER BY ta.id LIMIT 1) AS teacher_name
+             FROM curriculum c
+             JOIN subjects s ON s.id = c.subject_id
+             WHERE c.academic_year_id = :curriculum_year AND c.grade_level_id = :curriculum_grade
+             ORDER BY s.name ASC',
+            [
+                'curriculum_teacher_section' => $sectionId,
+                'curriculum_name_section' => $sectionId,
+                'curriculum_year' => $yearId,
+                'curriculum_grade' => $gradeId,
+            ],
+        );
+
+        $curriculum = array_map(static fn (array $row): array => [
+            'subject_id' => (int) $row['subject_id'],
+            'code' => $row['code'],
+            'name' => $row['subject_name'],
+            'name_fa' => $row['subject_name_fa'],
+            'name_ps' => $row['subject_name_ps'],
+            'weekly_periods' => (int) $row['weekly_periods'],
+            'is_elective' => (int) $row['is_elective'],
+            'teacher_staff_id' => $row['teacher_staff_id'] === null ? null : (int) $row['teacher_staff_id'],
+            'teacher_name' => $row['teacher_name'] === null ? null : trim((string) $row['teacher_name']),
+        ], $curriculumRows);
+
         return Response::json([
             'section' => [
                 'id' => (int) $section['id'],
@@ -315,6 +395,9 @@ final class ClassesController extends Controller
                 'start_date' => $row['start_date'],
                 'is_current' => (int) $row['is_current'],
             ], $siblings),
+            'teachers' => $teachers,
+            'curriculum' => $curriculum,
+            'timetable' => TimetableGrid::forSection($this->db, $sectionId),
             'students' => $studentRows,
         ]);
     }

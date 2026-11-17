@@ -259,6 +259,49 @@ test('a class record is scoped to owning Teachers and hidden from portal Roles',
   }
 });
 
+test('a class record groups Teachers, flags unstaffed Subjects, and shares the Timetable grid', async () => {
+  const { json } = await admin.get(`/api/v1/sections/${fixture.sectionC}/profile`);
+  const data = json.data;
+
+  assert.equal(data.teachers.length, 1);
+  const homeroom = data.teachers[0];
+  assert.equal(homeroom.is_homeroom, true);
+  assert.equal(homeroom.first_name, 'Wahid');
+  assert.equal(homeroom.last_name, 'Sultani');
+  assert.deepEqual(
+    homeroom.subjects.map((subject) => subject.code).sort(),
+    ['DARI', 'MATH'],
+  );
+
+  assert.equal(data.curriculum.length, 3);
+  const byCode = new Map(data.curriculum.map((subject) => [subject.code, subject]));
+  assert.equal(byCode.get('MATH').teacher_name, 'Wahid Sultani');
+  assert.equal(byCode.get('MATH').weekly_periods, 4);
+  assert.equal(byCode.get('ENG').teacher_name, null, 'an unstaffed Subject has no teacher');
+  assert.equal(byCode.get('ENG').teacher_staff_id, null);
+
+  assert.equal(data.timetable.periods.length, 2);
+  assert.deepEqual(data.timetable.teachingDays, [6, 0, 1, 2, 3, 4]);
+  const lesson = data.timetable.lessons[fixture.periodOne]?.[0];
+  assert.ok(lesson, 'the placed Lesson appears in the grid');
+  assert.equal(lesson.subject_code, 'MATH');
+  assert.equal(lesson.first_name, 'Wahid');
+
+  const direct = (await admin.get(`/api/v1/sections/${fixture.sectionC}/timetable`)).json.data;
+  assert.deepEqual(data.timetable.periods, direct.periods);
+  assert.deepEqual(data.timetable.lessons, direct.lessons);
+  assert.deepEqual(data.timetable.teachingDays, direct.teachingDays);
+});
+
+test('a class record distinguishes an empty period grid and unstaffed teaching', async () => {
+  const data = (await admin.get(`/api/v1/sections/${fixture.sectionZCurrent}/profile`)).json.data;
+
+  assert.deepEqual(data.teachers, []);
+  assert.deepEqual(data.timetable.periods, []);
+  assert.equal(Object.keys(data.timetable.lessons).length, 0, 'no Period grid means no Lessons');
+  assert.ok(data.timetable.teachingDays.length > 0);
+});
+
 test('an unknown Section has no class record', async () => {
   const { response, json } = await admin.get('/api/v1/sections/999999/profile');
   assert.equal(response.status, 404);
