@@ -13,6 +13,7 @@ return static function (\PDO $pdo): void {
         'audit.view' => ['View audit history', 'Read Audit Entries.'],
         'operations.manage' => ['Manage operations', 'Create and restore backups and inspect system health.'],
         'academic.manage' => ['Manage academic structure', 'Manage Academic Years, Grade Levels, Sections, Subjects, and timetables.'],
+        'academic.view' => ['View class records', 'Read the Classes area and class records.'],
         'students.manage' => ['Manage students', 'Create and update Student and Guardian records.'],
         'students.view' => ['View students', 'Read Student records and profiles.'],
         'staff.manage' => ['Manage staff', 'Create and update Staff records.'],
@@ -81,22 +82,24 @@ return static function (\PDO $pdo): void {
         'principal' => [
             'dashboard.view', 'audit.view', 'students.view', 'staff.view', 'attendance.view',
             'exams.view', 'finance.view', 'library.view', 'announcements.manage', 'announcements.view',
-            'settings.manage',
+            'settings.manage', 'academic.view',
         ],
         'registrar' => [
             'dashboard.view', 'academic.manage', 'students.manage', 'students.view', 'staff.manage',
             'staff.view', 'admissions.manage', 'attendance.view', 'exams.view', 'announcements.view',
+            'academic.view',
         ],
         'teacher' => [
             'dashboard.view', 'attendance.manage', 'attendance.view', 'exams.manage', 'exams.view',
-            'students.view', 'announcements.view',
+            'students.view', 'announcements.view', 'academic.view',
         ],
         'accountant' => [
             'dashboard.view', 'finance.manage', 'finance.view', 'students.view', 'announcements.view',
+            'academic.view',
         ],
         'librarian' => [
             'dashboard.view', 'library.manage', 'library.view', 'students.view', 'staff.view',
-            'announcements.view',
+            'announcements.view', 'academic.view',
         ],
         'student' => [
             'dashboard.view', 'portal.student', 'announcements.view', 'attendance.view', 'exams.view',

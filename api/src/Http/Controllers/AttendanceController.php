@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Meridian\Api\Http\Controllers;
 
+use Meridian\Api\Access\SectionAccess;
 use Meridian\Api\Core\HttpException;
 use Meridian\Api\Core\Request;
 use Meridian\Api\Core\Response;
@@ -12,9 +13,12 @@ use PDO;
 
 final class AttendanceController extends Controller
 {
+    private readonly SectionAccess $sectionAccess;
+
     public function __construct(PDO $db)
     {
         parent::__construct($db);
+        $this->sectionAccess = new SectionAccess($db);
     }
 
     public function index(Request $request): Response
@@ -63,7 +67,7 @@ final class AttendanceController extends Controller
         $date = $this->dateInput($request, 'date', 'date');
         $periodId = $this->intInput($request, 'periodId');
         $this->section($sectionId);
-        $this->assertSectionAccess($request, $sectionId);
+        $this->sectionAccess->assertAccess($this->user($request), $sectionId);
         $this->assertNotLocked($date);
 
         $students = $this->fetchAll(
@@ -111,7 +115,7 @@ final class AttendanceController extends Controller
         $date = $this->dateInput($request, 'date', 'date');
         $periodId = $this->intInput($request, 'periodId');
         $this->section($sectionId);
-        $this->assertSectionAccess($request, $sectionId);
+        $this->sectionAccess->assertAccess($this->user($request), $sectionId);
         $this->assertNotLocked($date);
         $records = $request->input('records');
         if (!is_array($records) || $records === []) {
@@ -183,7 +187,7 @@ final class AttendanceController extends Controller
             throw HttpException::validation(['studentId' => 'validation.required']);
         }
         if ($sectionId !== null) {
-            $this->assertSectionAccess($request, $sectionId);
+            $this->sectionAccess->assertAccess($this->user($request), $sectionId);
         }
         $where = [];
         $params = [];
@@ -338,29 +342,6 @@ final class AttendanceController extends Controller
         }
 
         return $section;
-    }
-
-    private function assertSectionAccess(Request $request, int $sectionId): void
-    {
-        $user = $this->user($request);
-        if (!in_array($user->roleSlug, ['teacher'], true)) {
-            return;
-        }
-        $staff = $this->fetchOne('SELECT id FROM staff WHERE user_id = :user', ['user' => $user->id]);
-        if ($staff === null) {
-            throw HttpException::forbidden();
-        }
-        $allowed = $this->fetchOne(
-            'SELECT 1 FROM sections s WHERE s.id = :section AND (
-                s.homeroom_teacher_id = :staff OR EXISTS (
-                    SELECT 1 FROM teaching_assignments a WHERE a.section_id = s.id AND a.teacher_staff_id = :staff
-                )
-             )',
-            ['section' => $sectionId, 'staff' => $staff['id']],
-        );
-        if ($allowed === null) {
-            throw HttpException::forbidden();
-        }
     }
 
     private function assertNotLocked(string $date): void

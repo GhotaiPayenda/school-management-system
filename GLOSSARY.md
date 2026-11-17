@@ -24,6 +24,10 @@ _Avoid_: class, division
 The human-readable label for a Section, such as "Class 10-A"; it never means a scheduled lesson.
 _Avoid_: using it for a Lesson
 
+**Classes**:
+The staff-facing name for the browsable list of Section records across Academic Years; it is a read-only view over Sections, not a new entity, and never a Lesson.
+_Avoid_: using it for a scheduled lesson
+
 **Subject**:
 A taught discipline, such as Mathematics or Dari, belonging to one Department.
 _Avoid_: course
