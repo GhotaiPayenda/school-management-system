@@ -161,6 +161,24 @@ test('print surfaces render for timetables, exams, report cards, receipts, ID ca
   await expect(page.locator('.id-card')).toBeVisible();
   await page.getByRole('button', { name: 'Close' }).first().click();
 
+  await page.goto('/classes');
+  await expectPageHealthy(page);
+  await page.locator('.class-card').first().click();
+  await expect(page.locator('.page-title')).toContainText('Section');
+  await page.getByRole('button', { name: 'Print class profile' }).click();
+  await expect(page.locator('body')).toHaveClass(/has-print-sheet/);
+  const classSheet = page.locator('.class-profile-sheet');
+  await expect(classSheet).toBeVisible();
+  await expect(classSheet).toContainText('Class profile');
+  await expect(classSheet).toContainText('Students');
+  await expect(classSheet).toContainText('Teachers');
+  await expect(classSheet).toContainText('Subjects');
+  await expect(classSheet).toContainText('Timetable');
+  await expect(classSheet).toContainText('Attendance');
+  await expect(classSheet).toContainText('Results');
+  await page.getByRole('button', { name: 'Close' }).first().click();
+  await expect(page.locator('body')).not.toHaveClass(/has-print-sheet/);
+
   expect(pageErrors).toEqual([]);
 });
 

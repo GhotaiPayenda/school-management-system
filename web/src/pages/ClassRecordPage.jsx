@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft, ChevronDown } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ChevronDown, Printer } from 'lucide-react';
 import {
   Badge,
+  Button,
   DataTable,
   EmptyState,
   ErrorState,
@@ -12,6 +13,7 @@ import {
   KeyValue,
   LetterBadge,
   LoadingBlock,
+  Modal,
   PageHeader,
   Panel,
   Select,
@@ -21,6 +23,7 @@ import {
   TabsList,
   TabsTrigger,
 } from '../components/ui.jsx';
+import { PrintButton, PrintFooter, PrintHeader, usePrintMode } from '../components/print.jsx';
 import { selectAuth } from '../features/auth/authSlice.js';
 import { useApi } from '../lib/useApi.js';
 import { useFormat } from '../lib/format.js';
@@ -68,6 +71,7 @@ export default function ClassRecordPage() {
   const [attendanceDate, setAttendanceDate] = useState('');
   const [attendanceSemester, setAttendanceSemester] = useState('');
   const [expandedResult, setExpandedResult] = useState(null);
+  const [printOpen, setPrintOpen] = useState(false);
 
   const attendanceParams = useMemo(() => {
     const params = {};
@@ -98,7 +102,10 @@ export default function ClassRecordPage() {
     setAttendanceDate('');
     setAttendanceSemester('');
     setExpandedResult(null);
+    setPrintOpen(false);
   }, [id]);
+
+  usePrintMode(printOpen);
 
   const section = data?.section;
   const counts = data?.counts;
@@ -255,19 +262,25 @@ export default function ClassRecordPage() {
         title={t('classes.recordTitle', { name: section.name })}
         copy={t('classes.recordCopy')}
         actions={
-          <div className="class-year-filter">
-            <Select
-              aria-label={t('classes.yearSwitcher')}
-              value={selectedYear}
-              onChange={(event) => switchYear(event.target.value)}
-            >
-              {years.map((year) => (
-                <option key={year.id} value={year.id}>
-                  {yearLabel(year, format)}
-                  {Number(year.is_current) === 1 ? ` · ${t('classes.currentYear')}` : ''}
-                </option>
-              ))}
-            </Select>
+          <div className="inline-actions class-record-actions">
+            <Button variant="quiet" size="sm" onClick={() => setPrintOpen(true)}>
+              <Printer size={15} />
+              {t('classes.printProfile')}
+            </Button>
+            <div className="class-year-filter">
+              <Select
+                aria-label={t('classes.yearSwitcher')}
+                value={selectedYear}
+                onChange={(event) => switchYear(event.target.value)}
+              >
+                {years.map((year) => (
+                  <option key={year.id} value={year.id}>
+                    {yearLabel(year, format)}
+                    {Number(year.is_current) === 1 ? ` · ${t('classes.currentYear')}` : ''}
+                  </option>
+                ))}
+              </Select>
+            </div>
           </div>
         }
       />
@@ -771,6 +784,232 @@ export default function ClassRecordPage() {
           </>
         )}
       </Panel>
+
+      <Modal
+        open={printOpen}
+        onOpenChange={setPrintOpen}
+        title={t('classes.printProfile')}
+        size="xl"
+        footer={
+          <>
+            <Button variant="quiet" onClick={() => setPrintOpen(false)}>{t('common.close')}</Button>
+            <PrintButton />
+          </>
+        }
+      >
+        <div className="print-area class-profile-sheet">
+          <PrintHeader
+            title={t('classes.printTitle')}
+            meta={`${localizedGrade(section, format.language)} · ${yearLabel(
+              yearEntry ?? {
+                label: section.academic_year_label,
+                start_date: section.academic_year_start_date,
+                end_date: section.academic_year_end_date,
+              },
+              format,
+            )}`}
+          />
+
+          <section className="profile-section">
+            <h3>{t('classes.overview')}</h3>
+            <KeyValue
+              columns={3}
+              items={[
+                { label: t('classes.classLabel'), value: section.name },
+                { label: t('classes.gradeLevel'), value: localizedGrade(section, format.language) },
+                { label: t('classes.homeroomTeacher'), value: section.homeroom_teacher_name || t('classes.noHomeroomTeacher') },
+                {
+                  label: t('classes.activeStudents'),
+                  value: t('classes.occupancy', {
+                    active: format.formatInteger(counts.active_students),
+                    capacity: format.formatInteger(counts.capacity),
+                  }),
+                },
+                { label: t('classes.subjects'), value: format.formatInteger(counts.subject_count) },
+                { label: t('classes.unassignedSubjects'), value: format.formatInteger(counts.unassigned_subject_count) },
+              ]}
+            />
+          </section>
+
+          <section className="profile-section">
+            <h3>{t('classes.roster')}</h3>
+            <table className="class-subject-table">
+              <thead>
+                <tr>
+                  <th>{t('people.admissionNumber')}</th>
+                  <th>{t('people.student')}</th>
+                  <th>{t('people.status')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {students.map((student) => (
+                  <tr key={student.enrollment_id}>
+                    <td>{student.admission_number}</td>
+                    <td>{studentName(student, format.language)}</td>
+                    <td>{t(`status.${student.enrollment_status}`, { defaultValue: student.enrollment_status })}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+
+          <section className="profile-section">
+            <h3>{t('classes.teachers')}</h3>
+            {teachers.length === 0 ? (
+              <p className="muted">{t('classes.noTeachers')}</p>
+            ) : (
+              <ul className="profile-teacher-list">
+                {teachers.map((teacher) => (
+                  <li key={teacher.staff_id}>
+                    <strong>{teacherName(teacher, format.language)}</strong>
+                    {teacher.is_homeroom ? ` · ${t('classes.homeroomBadge')}` : ''}
+                    {': '}
+                    {teacher.subjects.map((subject) => subjectName(subject, format.language)).join('، ')}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="profile-section">
+            <h3>{t('classes.subjects')}</h3>
+            <table className="class-subject-table">
+              <thead>
+                <tr>
+                  <th>{t('classes.subject')}</th>
+                  <th>{t('academic.weeklyPeriods')}</th>
+                  <th>{t('timetable.teacher')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {curriculum.map((subject) => (
+                  <tr key={subject.subject_id}>
+                    <td>{subjectName(subject, format.language)}</td>
+                    <td>{format.formatInteger(subject.weekly_periods)}</td>
+                    <td>{subject.teacher_name || t('classes.unassigned')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+
+          {periods.length > 0 && lessonCount > 0 ? (
+            <section className="profile-section">
+              <h3>{t('classes.timetable')}</h3>
+              <table className="class-subject-table timetable">
+                <thead>
+                  <tr>
+                    <th>{t('attendance.period')}</th>
+                    {days.map((day) => <th key={day}>{t(`day.${day}`)}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {periods.map((period) => (
+                    <tr key={period.id}>
+                      <th>{period.label || (period.kind === 'break'
+                        ? t('timetable.break')
+                        : format.formatInteger(period.sort_order))}</th>
+                      {period.kind === 'break' ? (
+                        <td colSpan={days.length} className="muted">{t('timetable.break')}</td>
+                      ) : days.map((day) => {
+                        const lesson = lessons?.[period.id]?.[day];
+                        return (
+                          <td key={day}>
+                            {lesson
+                              ? `${lesson.subject_name} · ${lesson.first_name} ${lesson.last_name}`
+                              : '—'}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          ) : null}
+
+          {canViewAttendance && attendance?.has_records ? (
+            <section className="profile-section">
+              <h3>{t('classes.attendance')}</h3>
+              <p className="print-totals">
+                {t('attendance.present')}: {format.formatInteger(attendance.summary.section.present)} ·{' '}
+                {t('attendance.absent')}: {format.formatInteger(attendance.summary.section.absent)} ·{' '}
+                {t('attendance.late')}: {format.formatInteger(attendance.summary.section.late)} ·{' '}
+                {t('attendance.excused')}: {format.formatInteger(attendance.summary.section.excused)} ·{' '}
+                {t('attendance.rate')}: {attendance.summary.section.attendance_rate === null
+                  ? t('classes.notRecorded')
+                  : format.formatPercent(attendance.summary.section.attendance_rate)}
+              </p>
+              <table className="class-subject-table">
+                <thead>
+                  <tr>
+                    <th>{t('people.student')}</th>
+                    <th>{t('attendance.present')}</th>
+                    <th>{t('attendance.absent')}</th>
+                    <th>{t('attendance.late')}</th>
+                    <th>{t('attendance.excused')}</th>
+                    <th>{t('attendance.rate')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {attendance.summary.students.map((row) => {
+                    const student = attendanceStudentById.get(row.student_id);
+                    return (
+                      <tr key={row.student_id}>
+                        <td>{student ? studentName(student, format.language) : '—'}</td>
+                        <td>{format.formatInteger(row.present)}</td>
+                        <td>{format.formatInteger(row.absent)}</td>
+                        <td>{format.formatInteger(row.late)}</td>
+                        <td>{format.formatInteger(row.excused)}</td>
+                        <td>{row.attendance_rate === null ? t('classes.notRecorded') : format.formatPercent(row.attendance_rate)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </section>
+          ) : null}
+
+          {canViewResults && hasPublishedResults ? (
+            <section className="profile-section">
+              <h3>{t('classes.results')}</h3>
+              <p className="print-totals">
+                {t('classes.classAverage')}: {classAverage === null ? '—' : format.formatNumber(classAverage, { maximumFractionDigits: 1 })} ·{' '}
+                {t('classes.passRate')}: {resultRows.length === 0 ? '—' : format.formatPercent((passingStudents / resultRows.length) * 100)} ·{' '}
+                {t('classes.studentsWithFailures')}: {format.formatInteger(failingStudents)} ·{' '}
+                {t('classes.retentionCount')}: {format.formatInteger(retentionStudents)}
+              </p>
+              <table className="class-subject-table">
+                <thead>
+                  <tr>
+                    <th>{t('people.student')}</th>
+                    <th>{t('results.average')}</th>
+                    <th>{t('results.letterGrade')}</th>
+                    <th>{t('results.retentionSubjects')}</th>
+                    <th>{t('people.status')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {resultRows.map((row) => (
+                    <tr key={row.student.id}>
+                      <td>{row.student.first_name} {row.student.last_name}</td>
+                      <td>{row.average === null ? '—' : format.formatNumber(row.average, { maximumFractionDigits: 1 })}</td>
+                      <td>{row.letterGrade || '—'}</td>
+                      <td>{format.formatInteger(row.failedSubjects)}</td>
+                      <td>
+                        {row.failedSubjects === 0 ? t('results.passed') : t('results.failed')}
+                        {(row.subjects ?? []).some((subject) => subject.retention) ? ` · ${t('results.retention')}` : ''}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          ) : null}
+
+          <PrintFooter />
+        </div>
+      </Modal>
     </div>
   );
 }

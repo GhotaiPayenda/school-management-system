@@ -4411,6 +4411,46 @@ html[dir='rtl'] .result-label {
   white-space: nowrap;
 }
 
+.class-record-actions {
+  flex-wrap: wrap;
+}
+
+.class-profile-sheet {
+  display: grid;
+  gap: 1.1rem;
+}
+
+.profile-section h3 {
+  margin: 0 0 0.4rem;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.profile-teacher-list {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+  padding-inline-start: 1.1rem;
+  font-size: 0.82rem;
+}
+
+.print-totals {
+  margin: 0 0 0.5rem;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+
+@media print {
+  .class-profile-sheet {
+    gap: 0.8rem;
+  }
+
+  .profile-section {
+    break-inside: avoid;
+  }
+}
+
 .lesson-chip-readonly {
   cursor: default;
 }
