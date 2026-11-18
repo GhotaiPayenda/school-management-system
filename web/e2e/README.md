@@ -46,14 +46,16 @@ Override them with `MERIDIAN_E2E_ADMIN_EMAIL`, `MERIDIAN_E2E_TEMP_PASSWORD`,
 
 1. Super Admin signs in, is forced to change the temporary password, opens every
    staff module, and logs out.
-2. Printable timetable, exam schedule, report card, receipt, ID card, and class
-   list sheets render with the school header.
+2. Printable timetable, exam schedule, report card, receipt, ID card, class
+   list, and class profile sheets render with the school header.
 3. A Teacher cannot open the Roles screen.
 4. The shell switches language and theme, preserves both across reloads, sets
    RTL for Dari and Pashto, and renders Persian-calendar dates with Eastern
    digits.
 5. A Guardian opens the family portal, sees only family navigation, and cannot
    open staff screens.
+6. A staff member browses Classes, opens a complete class record, and prints the
+   class profile.
 
 The admin journey changes the temporary password, so always rebuild the
 disposable database before rerunning it. `web/test-results/` and

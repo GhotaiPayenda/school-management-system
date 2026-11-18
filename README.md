@@ -6,9 +6,9 @@ API, a React single-page application, and a SQLite database with migrations and
 seeders.
 
 The v1 modules cover academic setup, timetables, people and admissions,
-attendance, exams and results, report cards, finance, the library, announcements,
-audit history, backup and restore, CSV import and export, and role-specific
-staff, student, and guardian portals.
+attendance, exams and results, report cards, class records (Classes), finance,
+the library, announcements, audit history, backup and restore, CSV import and
+export, and role-specific staff, student, and guardian portals.
 
 ## Requirements
 
@@ -69,6 +69,25 @@ supplementary examples, published report cards, fee structures, issued invoices,
 payments, library loans and fines, announcements, applicants, and audit entries.
 The demo academic year is generated relative to the current date while keeping
 the Afghan March-to-January shape.
+
+## Classes
+
+**Classes** in the sidebar opens a read-only view of Section records grouped by
+Academic Year and Grade Level. Any staff Role with the `academic.view`
+Permission can open it; Student and Guardian cannot, and a Teacher only sees the
+Sections they lead or teach.
+
+Each class record shows the roster, Homeroom Teacher, Teaching Assignments, the
+Grade Level curriculum with unstaffed Subjects flagged, the weekly Timetable,
+Attendance for a chosen day and Semester, and published Results. **Print class
+profile** produces one localized sheet.
+
+`academic.view` is seeded, not migrated. On an existing database, rerun the
+seeder to grant it to the six Staff Roles:
+
+```powershell
+npm run db:seed
+```
 
 Reset the demo at any time:
 
@@ -155,6 +174,7 @@ create Audit Entries.
 ```powershell
 php scripts/lint-php.php     # php -l over every PHP file
 npm run test:api             # HTTP API integration tests, real PHP + SQLite
+npm run check:i18n           # no missing translation keys
 npm --prefix web run build   # production SPA build
 ```
 
@@ -180,10 +200,11 @@ npm run test:e2e
 ```
 
 The browser journeys cover the forced password change and every staff module,
-the printable timetable, exam schedule, report card, receipt, ID card, and class
-list surfaces, Teacher RBAC, Guardian portal isolation, and language/RTL/theme
-persistence. The admin journey changes the temporary password, so rebuild the
-disposable database before rerunning the suite. See
+the printable timetable, exam schedule, report card, receipt, ID card, class
+list, and class profile surfaces, a complete class record, Teacher RBAC,
+Guardian portal isolation, and language/RTL/theme persistence. The admin journey
+changes the temporary password, so rebuild the disposable database before
+rerunning the suite. See
 [`web/e2e/README.md`](web/e2e/README.md) for details.
 
 ## Layout

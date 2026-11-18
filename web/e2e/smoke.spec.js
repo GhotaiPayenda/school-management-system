@@ -254,3 +254,49 @@ test('a Guardian opens the family portal without staff screens', async ({ page }
 
   expect(pageErrors).toEqual([]);
 });
+
+test('a staff member browses Classes and opens a complete class record', async ({ page }) => {
+  const pageErrors = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+
+  await signIn(page, adminEmail, newPassword);
+  await page.waitForURL('/');
+  await expectPageHealthy(page);
+
+  await page.goto('/classes');
+  await expectPageHealthy(page);
+  await expect.poll(() => page.locator('.class-year-group').count()).toBeGreaterThan(0);
+  await expect.poll(() => page.locator('.class-grade-group').count()).toBeGreaterThan(0);
+
+  const firstCard = page.locator('.class-card').first();
+  await expect(firstCard).toBeVisible();
+  await expect(firstCard).toContainText('Section');
+  await firstCard.click();
+
+  await expect(page).toHaveURL(/\/classes\/\d+$/);
+  await expect(page.locator('.page-title')).toContainText('Section');
+  await expect(page.locator('.back-link')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Students', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Teachers', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Subjects', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Timetable', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Attendance', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Results', exact: true })).toBeVisible();
+  await expect.poll(() => page.locator('.data-table tbody tr').count()).toBeGreaterThan(0);
+
+  await page.getByRole('button', { name: 'Print class profile' }).click();
+  const classSheet = page.locator('.class-profile-sheet');
+  await expect(classSheet).toBeVisible();
+  await expect(page.locator('body')).toHaveClass(/has-print-sheet/);
+  await expect(classSheet).toContainText('Class profile');
+  await expect(classSheet).toContainText('Teachers');
+  await expect(classSheet).toContainText('Attendance');
+  await expect(classSheet).toContainText('Results');
+  await page.getByRole('button', { name: 'Close' }).first().click();
+  await expect(page.locator('body')).not.toHaveClass(/has-print-sheet/);
+
+  await page.locator('.back-link').click();
+  await expect(page).toHaveURL(/\/classes$/);
+
+  expect(pageErrors).toEqual([]);
+});

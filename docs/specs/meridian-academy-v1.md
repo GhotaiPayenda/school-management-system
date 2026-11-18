@@ -334,9 +334,21 @@ The schema is greenfield. The following entities and invariants define it:
 - Fonts: Fraunces or Instrument Serif for Latin display, Inter for Latin UI, Noto Naskh Arabic for Arabic-script display, Noto Sans Arabic for Arabic-script UI.
 - Eastern Arabic-Indic digits are used in Dari and Pashto displays. Inputs accept both digit sets and normalize to Western digits before submission.
 - Dates display as Solar Hijri in Dari and Pashto and Gregorian in English, with a Gregorian/Solar toggle where useful. Storage remains ISO.
-- Print views exist for Semester and Annual Report Cards, Receipts, timetables, ID cards, class lists, and Exam Schedules. Printing uses browser print CSS; no server-side PDF library.
+- Print views exist for Semester and Annual Report Cards, Receipts, timetables, ID cards, class lists, Exam Schedules, and class profiles. Printing uses browser print CSS; no server-side PDF library.
 - The UI is responsive with a mobile-friendly attendance grid and score entry, but the primary admin experience is desktop.
 - Accessibility target is WCAG 2.1 AA: semantic landmarks, visible focus, labelled controls, keyboard-operable dialogs and menus, sufficient contrast, and reduced-motion support.
+
+### Classes read model
+
+- **Classes** is the staff-facing read model over Section records, grouped by Academic Year and Grade Level. It is not a new entity and is never a Lesson.
+- Access uses a dedicated `academic.view` Permission granted to Super Admin, Principal, Registrar, Teacher, Accountant, and Librarian. Student and Guardian do not receive it, and Teacher access is scoped to Sections they lead or teach.
+- `GET /classes` returns one card per Section with identity, Grade Level, Academic Year, Homeroom Teacher, capacity and Enrollment counts, Subject and Unassigned Subject counts, and Attendance rate. The list defaults to the current Academic Year and supports a year filter and an all-years view.
+- `GET /sections/{id}/profile` returns the header, counts, sibling Sections for the same class name, the roster, Teaching Assignments grouped by Teacher, the curriculum with staffing, and the weekly Timetable grid.
+- `GET /sections/{id}/attendance` resolves the day by the teaching calendar and returns the day roster plus per-Student and Section Semester summaries. Per-period records collapse to one status per Student per date using daily-first, then absent, late, excused, present.
+- The class record reuses the existing Section results read model and adds no grading arithmetic. Unpublished Exam Scores display as pending.
+- Attendance and Results honour `attendance.view` and `exams.view` independently; the rest of the record remains readable when either is missing.
+- The record prints as one localized sheet with school header, identity, roster, Teachers and Subjects, Timetable, Attendance summary, and Results summary. Panels the viewer cannot read are omitted from the sheet.
+- The `pageSize` query parameter is accepted as an alias of `perPage` by the shared pagination reader.
 
 ### Design system
 
