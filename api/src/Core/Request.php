@@ -24,7 +24,12 @@ final class Request
     ) {
     }
 
-    public static function fromGlobals(): self
+    /**
+     * @param bool $trustProxy Read the client address from X-Forwarded-For /
+     *                         X-Real-IP. Only enable behind a proxy that
+     *                         overwrites those headers.
+     */
+    public static function fromGlobals(bool $trustProxy = false): self
     {
         $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
         $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
@@ -61,9 +66,30 @@ final class Request
             $_GET,
             $headers,
             $body,
-            (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown'),
+            ($trustProxy ? self::forwardedIp($headers) : null)
+                ?? (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown'),
             (string) ($headers['user-agent'] ?? 'unknown'),
         );
+    }
+
+    /**
+     * @param array<string, string> $headers
+     */
+    private static function forwardedIp(array $headers): ?string
+    {
+        foreach (['x-forwarded-for', 'x-real-ip'] as $name) {
+            $raw = $headers[$name] ?? '';
+
+            foreach (explode(',', $raw) as $candidate) {
+                $candidate = trim($candidate);
+
+                if ($candidate !== '' && filter_var($candidate, FILTER_VALIDATE_IP) !== false) {
+                    return $candidate;
+                }
+            }
+        }
+
+        return null;
     }
 
     /**

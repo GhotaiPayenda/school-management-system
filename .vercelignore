@@ -1,0 +1,21 @@
+# Vercel hosts the built SPA only. The PHP API, SQLite database, migrations,
+# seeders, tests, and local tooling are deployed to a persistent host instead.
+api/
+database/
+scripts/
+tests/
+storage/
+docs/
+.scratch/
+test-results/
+web/dist/
+web/node_modules/
+web/e2e/
+web/playwright-report/
+web/test-results/
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+.env
+.env.*

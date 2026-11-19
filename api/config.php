@@ -13,6 +13,7 @@ return [
         'environment' => $environment,
         'debug' => $environment === 'local',
         'api_prefix' => '/api/v1',
+        'trust_proxy' => (getenv('MERIDIAN_TRUST_PROXY') ?: '0') === '1',
     ],
     'database' => [
         'path' => $databasePath,

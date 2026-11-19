@@ -1,0 +1,45 @@
+# Render blueprint for the persistent PHP + SQLite backend.
+#
+# The Vercel deployment serves the SPA and proxies /api here, so the browser
+# keeps a single origin and the session cookie stays host-only.
+#
+# One instance only: SQLite allows a single writer and Render disks are
+# attached to one service. Do not scale this service horizontally.
+#
+# Note: persistent disks (and therefore this blueprint) need a paid Render
+# plan. Railway, Fly.io, or a VPS work the same way with the same Dockerfile.
+
+services:
+  - type: web
+    name: meridian-academy-api
+    runtime: docker
+    plan: starter
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: MERIDIAN_ENV
+        value: production
+      - key: MERIDIAN_DB_PATH
+        value: /data/meridian.sqlite
+      - key: MERIDIAN_STORAGE_PATH
+        value: /data/storage
+      - key: MERIDIAN_SEED_DEMO
+        value: "0"
+      - key: MERIDIAN_AUTO_MIGRATE
+        value: "1"
+      - key: MERIDIAN_SECURE_COOKIES
+        value: "1"
+      # Render terminates TLS in front of the container, so the client address
+      # must come from X-Forwarded-For for the sign-in rate limiter to work.
+      - key: MERIDIAN_TRUST_PROXY
+        value: "1"
+      - key: MERIDIAN_ADMIN_EMAIL
+        sync: false
+      - key: MERIDIAN_ADMIN_PASSWORD
+        sync: false
+    disk:
+      name: meridian-data
+      mountPath: /data
+      sizeGB: 1

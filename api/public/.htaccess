@@ -1,0 +1,9 @@
+# Apache fallback for hosts that point a virtual host at api/public instead of
+# using the bundled Docker image. Vercel and the Docker image do not need it.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+Options -Indexes

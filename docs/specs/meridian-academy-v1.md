@@ -380,9 +380,11 @@ The schema is greenfield. The following entities and invariants define it:
 - Dashboard aggregates use targeted queries rather than loading full tables. N+1 queries are avoided in list and profile responses.
 - SQLite WAL supports concurrent readers. Writes are short and transactional. Long imports and invoice generation run in batches with progress reporting.
 - The system is online-only over the LAN. There is no offline sync, service worker cache of school data, or background replication.
-- Deployment supports XAMPP/Apache and PHP's built-in server. A `.htaccess` fallback routes SPA and API requests correctly; the built-in server uses a router script.
-- The database, uploads, and backups live in a writable storage directory outside the web root. A health check reports database reachability, storage writability, and last backup time.
-- The seed command creates a complete demo school: 12 Grade Levels, two Sections per grade, Afghan names, standard subjects, demo Users for every Role, sample attendance, exams, scores, invoices, payments, and library loans.
+- Deployment supports the bundled Docker image (PHP 8.2 + Apache + SQLite with `/data` as the persistent volume), an existing Apache/XAMPP host, and PHP's built-in server. A `.htaccess` fallback routes API requests; the built-in server uses a router script.
+- The SPA can be served by Vercel. Vercel has no PHP runtime and functions have an ephemeral filesystem, so Vercel serves `web/dist` and Routing Middleware (`proxy.js`) forwards `/api/*` to a persistent PHP host. The browser keeps one origin and the session cookie stays host-only. Vercel limits proxied request bodies to 4 MB, so a deployment that needs larger document uploads serves the SPA from the API host instead.
+- The API host runs one instance because SQLite has one writer. It restores migrations and seeders on boot, trusts `X-Forwarded-For` only when `MERIDIAN_TRUST_PROXY=1`, and marks the session cookie `Secure` when `MERIDIAN_SECURE_COOKIES=1`.
+- The database, uploads, and backups live in a writable storage directory outside the web root. A health check reports database reachability and storage writability.
+- The seed command creates a complete demo school: 12 Grade Levels, two Sections per grade, Afghan names, standard subjects, demo Users for every Role, sample attendance, exams, scores, invoices, payments, and library loans. Production sets `MERIDIAN_SEED_DEMO=0` and seeds only roles, permissions, school settings, and the Super Admin.
 - The README covers setup on XAMPP and `php -S`, seeding, default logins, backup and restore, locale switching, and the test commands.
 
 ### Build order

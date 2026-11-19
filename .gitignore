@@ -16,9 +16,12 @@ storage/**
 *.db-shm
 .env
 .env.*
+!.env.example
 .DS_Store
 Thumbs.db
 playwright-report/
 test-results/
 .worktrees/
 tests/.tmp/
+.vercel/
+web/.vercel/

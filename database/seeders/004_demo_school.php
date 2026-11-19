@@ -9,6 +9,13 @@ declare(strict_types=1);
  * dashboard, current invoices, and attendance always have live data.
  */
 return static function (\PDO $pdo): void {
+    // Demo data is seeded by default for local development. Production hosts
+    // set MERIDIAN_SEED_DEMO=0 so the database is recorded as seeded without
+    // the demonstration school, grade levels, students, and staff.
+    if (getenv('MERIDIAN_SEED_DEMO') === '0') {
+        return;
+    }
+
     $now = gmdate('Y-m-d\TH:i:s\Z');
     $today = new DateTimeImmutable('now', new DateTimeZone('UTC'));
     $startYear = (int) $today->format('Y');

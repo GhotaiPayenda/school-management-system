@@ -17,6 +17,7 @@ final class Application
         private readonly Router $router,
         private readonly Container $container,
         private readonly array $globalMiddleware,
+        private readonly bool $trustProxy = false,
     ) {
     }
 
@@ -28,7 +29,7 @@ final class Application
     public function handle(?Request $request = null): Response
     {
         try {
-            $request ??= Request::fromGlobals();
+            $request ??= Request::fromGlobals($this->trustProxy);
 
             $core = fn (Request $incoming): Response => $this->dispatch($incoming);
 

@@ -15,6 +15,7 @@ declare(strict_types=1);
  * Options:
  *   --database=<path>  Override the SQLite file.
  *   --storage=<path>   Override the runtime storage directory.
+ *   --no-demo          Skip the demonstration school seeder.
  */
 
 use Meridian\Api\Core\Migrator;
@@ -46,6 +47,15 @@ if (isset($options['storage'])) {
     putenv('MERIDIAN_STORAGE_PATH=' . $options['storage']);
     $_ENV['MERIDIAN_STORAGE_PATH'] = $options['storage'];
     $_SERVER['MERIDIAN_STORAGE_PATH'] = $options['storage'];
+}
+
+if (
+    ($options['no-demo'] ?? 'false') === 'true'
+    || in_array($options['demo'] ?? null, ['0', 'false'], true)
+) {
+    putenv('MERIDIAN_SEED_DEMO=0');
+    $_ENV['MERIDIAN_SEED_DEMO'] = '0';
+    $_SERVER['MERIDIAN_SEED_DEMO'] = '0';
 }
 
 // Delete the database before the bootstrap opens a PDO connection. Windows
@@ -89,11 +99,19 @@ $runSeeders = static function () use ($pdo, $config): void {
         ? "Seeders: already applied.\n"
         : 'Seeders applied: ' . implode(', ', $applied) . "\n";
 
-    $adminEmail = getenv('MERIDIAN_ADMIN_EMAIL') ?: DefaultCredentials::ADMIN_EMAIL;
-    $adminPassword = getenv('MERIDIAN_ADMIN_PASSWORD') ?: DefaultCredentials::ADMIN_PASSWORD;
+    echo getenv('MERIDIAN_SEED_DEMO') === '0'
+        ? "Demo school: skipped (MERIDIAN_SEED_DEMO=0).\n"
+        : "Demo school: included.\n";
 
-    echo 'Super Admin: ' . $adminEmail . ' / ' . $adminPassword
-        . " (temporary password; change is forced on first sign-in)\n";
+    if (in_array('002_super_admin.php', $applied, true)) {
+        $adminEmail = getenv('MERIDIAN_ADMIN_EMAIL') ?: DefaultCredentials::ADMIN_EMAIL;
+        $adminPassword = getenv('MERIDIAN_ADMIN_PASSWORD') ?: DefaultCredentials::ADMIN_PASSWORD;
+
+        echo 'Super Admin: ' . $adminEmail . ' / ' . $adminPassword
+            . " (temporary password; change is forced on first sign-in)\n";
+    } else {
+        echo "Super Admin: already seeded.\n";
+    }
 };
 
 try {
@@ -142,6 +160,7 @@ Meridian Academy database tool
 Options:
   --database=<path>            Override the SQLite file
   --storage=<path>             Override the storage directory
+  --no-demo                    Skip the demonstration school seeder
 
 TEXT;
             break;

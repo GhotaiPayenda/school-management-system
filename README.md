@@ -12,7 +12,7 @@ export, and role-specific staff, student, and guardian portals.
 
 ## Requirements
 
-- PHP 8.2 or newer with `pdo_sqlite`, `openssl`, and `mbstring`
+- PHP 8.2 or newer with `pdo_sqlite` and `openssl`
 - Node.js 22 or newer (Node 26 is what this repository is verified against)
 - No Composer, framework, database server, or external service
 
@@ -68,7 +68,8 @@ The demo school seeds 12 Grade Levels, two Sections per grade, 144 students,
 supplementary examples, published report cards, fee structures, issued invoices,
 payments, library loans and fines, announcements, applicants, and audit entries.
 The demo academic year is generated relative to the current date while keeping
-the Afghan March-to-January shape.
+the Afghan March-to-January shape. Production hosts set `MERIDIAN_SEED_DEMO=0`
+so only roles, permissions, school settings, and the Super Admin are seeded.
 
 ## Classes
 
@@ -111,12 +112,32 @@ npm start
 assets from `web/dist`, and falls back to `web/dist/index.html` for client-side
 routes. Set `MERIDIAN_WEB_DIST` to use a different build directory.
 
-For a normal deployment, point nginx or Apache at `api/public` and let the same
-front controller serve `/api/v1` while a static host serves `web/dist`.
+For a real deployment, use the included `Dockerfile`: it builds the SPA and
+serves it and the API from PHP 8.2 + Apache with SQLite, with `/data` as the
+persistent volume. Set `MERIDIAN_DB_PATH=/data/meridian.sqlite`,
+`MERIDIAN_STORAGE_PATH=/data/storage`, and `MERIDIAN_SECURE_COOKIES=1`.
+
+### Vercel
+
+Vercel can host the SPA but not the PHP + SQLite API, because functions have an
+ephemeral filesystem. `vercel.json` and `proxy.js` deploy the SPA and proxy
+`/api/*` to a persistent API host, so the browser still sees one origin. To
+deploy:
+
+1. Deploy the API with `render.yaml` (or the `Dockerfile`) and copy its HTTPS
+   origin.
+2. Import this repository in Vercel, leave the root directory at the repository
+   root, and set `MERIDIAN_API_ORIGIN` to that origin.
+3. Deploy, then sign in and change the temporary Super Admin password.
+
+The full walkthrough, environment reference, limits, and troubleshooting live in
+[`docs/deployment.md`](docs/deployment.md). Vercel's routing middleware accepts
+request bodies up to 4 MB, so document uploads above roughly 3 MB need the
+Docker deployment that serves the SPA and API from one host.
 
 Runtime data (the SQLite database, WAL files, uploads, and backups) lives in
-`storage/` and is ignored by Git. The database directory is created on first
-use.
+`storage/` locally and in the mounted `/data` volume in the container, and is
+ignored by Git. The database directory is created on first use.
 
 ### Configuration
 
@@ -129,8 +150,17 @@ Environment variables override the defaults in `api/config.php`:
 | `MERIDIAN_STORAGE_PATH`   | Uploads and backups directory, default `storage/`              |
 | `MERIDIAN_WEB_DIST`       | Built SPA directory, default `web/dist`                        |
 | `MERIDIAN_SECURE_COOKIES` | `1` adds the `Secure` attribute to the session cookie          |
+| `MERIDIAN_TRUST_PROXY`    | `1` reads the client IP from `X-Forwarded-For`/`X-Real-IP`     |
+| `MERIDIAN_SEED_DEMO`      | `0` seeds roles, settings, and the Super Admin without demo data |
+| `MERIDIAN_AUTO_MIGRATE`   | `0` disables the container entrypoint's `db.php setup` run     |
 | `MERIDIAN_ADMIN_EMAIL`    | Email for the seeded Super Admin                               |
 | `MERIDIAN_ADMIN_PASSWORD` | Temporary password for the seeded Super Admin                  |
+| `MERIDIAN_API_ORIGIN`     | Vercel only: origin of the persistent API host for `proxy.js`  |
+
+Set `MERIDIAN_TRUST_PROXY=1` only behind a proxy that overwrites the forwarded
+headers; it keeps the sign-in rate limiter keyed per client. `MERIDIAN_SEED_DEMO=0`
+is what a production host uses, and `php scripts/db.php setup --no-demo` does the
+same from the command line.
 
 ## Languages, dates, and themes
 
@@ -220,8 +250,13 @@ storage/                Runtime database, uploads, and backups (ignored)
 tests/api/              HTTP-seam integration tests and test-only fixtures
 web/                    React + Vite SPA (plain JavaScript)
 web/e2e/                Playwright smoke journeys (opt-in)
-docs/                   Spec, shared understanding, ADRs, agent conventions
+docs/                   Spec, deployment, shared understanding, ADRs, agents
 .scratch/               Local issue tracker tickets
+Dockerfile              SPA + PHP 8.2 + Apache + SQLite image (data in /data)
+docker/                 Apache virtual host and container entrypoint
+proxy.js                Vercel routing middleware that proxies /api/*
+render.yaml             Render blueprint for the persistent API host
+vercel.json             Vercel build, SPA fallback, and /api proxy
 ```
 
 ## API conventions
@@ -263,6 +298,8 @@ docs/                   Spec, shared understanding, ADRs, agent conventions
 
 - [`docs/specs/meridian-academy-v1.md`](docs/specs/meridian-academy-v1.md) —
   full product spec and testing decisions
+- [`docs/deployment.md`](docs/deployment.md) — Vercel plus persistent PHP host
+  deployment, environment reference, limits, and troubleshooting
 - [`docs/shared-understanding.md`](docs/shared-understanding.md) — build contract
 - [`GLOSSARY.md`](GLOSSARY.md) — domain vocabulary
 - [`docs/adr/`](docs/adr/) — hard-to-reverse technical decisions

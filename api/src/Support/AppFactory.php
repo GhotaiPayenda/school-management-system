@@ -298,7 +298,7 @@ final class AppFactory
             return new Application($router, $c, [
                 $c->get('middleware.security'),
                 $c->get('middleware.csrf'),
-            ]);
+            ], (bool) ($config['app']['trust_proxy'] ?? false));
         });
 
         $storagePath = $config['storage']['path'];
