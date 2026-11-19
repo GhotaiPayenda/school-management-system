@@ -1,3 +1,5 @@
+# Keep the build context small. Patterns that refer to top-level directories are
+# anchored so they cannot exclude nested source such as web/src/api/.
 .git
 .gitignore
 .gitattributes
@@ -5,16 +7,16 @@
 .vercelignore
 node_modules
 web/node_modules
-web/dist
-web/playwright-report
-web/test-results
-web/e2e
-test-results
-playwright-report
-storage
-tests
-.scratch
-docs
+/web/dist
+/web/playwright-report
+/web/test-results
+/web/e2e
+/test-results
+/playwright-report
+/storage
+/tests
+/.scratch
+/docs
 *.sqlite
 *.sqlite3
 *.sqlite-wal
@@ -24,4 +26,4 @@ docs
 *.db-shm
 .env
 .env.*
-README.md
+/README.md
