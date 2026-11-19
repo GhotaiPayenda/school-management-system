@@ -4,7 +4,7 @@
 
 **Blocked by:** none (01–36 complete)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Problem Statement
 
@@ -192,15 +192,22 @@ Coverage expected at the API seam:
 
 ## Acceptance Criteria
 
-- [ ] A Staff member with `academic.view` sees **Classes** in the sidebar under Dashboard and can open the area.
-- [ ] Cards are grouped by Academic Year and Grade Level, default to the current year, and support a year filter and "all years".
-- [ ] Card facts include class name, Grade Level, Academic Year, Homeroom Teacher, occupancy, Subject count, and Attendance rate, with At capacity, Over capacity, and Unassigned Subject states.
-- [ ] A class record shows roster with inactive toggle, grouped Teachers with Homeroom pinned, curriculum with Unassigned flags, weekly Timetable, day and Semester Attendance, and published Results with expandable Subject detail.
-- [ ] The Year switcher follows the class name across Academic Years and shows **Not offered that year** when absent.
-- [ ] Attendance defaults to the most recent recorded date when today is not usable, and empty data shows an empty state rather than `0%`.
-- [ ] Results and Attendance panels degrade with a permission message for Roles lacking `exams.view` or `attendance.view`.
-- [ ] A Teacher sees and opens only their own Sections; Student and Guardian cannot reach the area; Principal, Accountant, and Librarian see what their Permissions allow.
-- [ ] Print class profile emits one clean sheet with header, roster, Teachers and Subjects, Timetable, Attendance, and Results.
-- [ ] English, Dari, and Pashto cover every label, including RTL, Solar Hijri dates, and Eastern digits; the i18n check reports zero missing keys.
-- [ ] API integration tests and the Playwright suite pass, including the new Classes journey and the existing print journey.
-- [ ] README, the v1 spec, and the Glossary are updated; no existing endpoint changes beyond the `pageSize` alias.
+- [x] A Staff member with `academic.view` sees **Classes** in the sidebar under Dashboard and can open the area.
+- [x] Cards are grouped by Academic Year and Grade Level, default to the current year, and support a year filter and "all years".
+- [x] Card facts include class name, Grade Level, Academic Year, Homeroom Teacher, occupancy, Subject count, and Attendance rate, with At capacity, Over capacity, and Unassigned Subject states.
+- [x] A class record shows roster with inactive toggle, grouped Teachers with Homeroom pinned, curriculum with Unassigned flags, weekly Timetable, day and Semester Attendance, and published Results with expandable Subject detail.
+- [x] The Year switcher follows the class name across Academic Years and shows **Not offered that year** when absent.
+- [x] Attendance defaults to the most recent recorded date when today is not usable, and empty data shows an empty state rather than `0%`.
+- [x] Results and Attendance panels degrade with a permission message for Roles lacking `exams.view` or `attendance.view`.
+- [x] A Teacher sees and opens only their own Sections; Student and Guardian cannot reach the area; Principal, Accountant, and Librarian see what their Permissions allow.
+- [x] Print class profile emits one clean sheet with header, roster, Teachers and Subjects, Timetable, Attendance, and Results.
+- [x] English, Dari, and Pashto cover every label, including RTL, Solar Hijri dates, and Eastern digits; the i18n check reports zero missing keys.
+- [x] API integration tests and the Playwright suite pass, including the new Classes journey and the existing print journey.
+- [x] README, the v1 spec, and the Glossary are updated; no existing endpoint changes beyond the `pageSize` alias.
+
+## Comments
+
+- Delivered as child tickets 38–44, all closed: list cards, class record and roster, Teachers/Subjects/Timetable, Attendance, Results, print profile, and acceptance.
+- Commits: `be05d2c` (38), `f6c8339` (39), `1a7846d` (40), `c878889` (41), `a92e12f` (42), `12f42c1` (43), `c70350d` (44).
+- Final gates: PHP lint 60 files, API suite 29/29, i18n TOTAL 0, production build succeeded, Playwright 6/6 including the new Classes journey and every print surface.
+- No schema changes and no new tables; Classes is a live read model over Sections. The only change to an existing contract is the `pageSize` alias for `perPage`.
