@@ -13,7 +13,7 @@ services:
   - type: web
     name: meridian-academy-api
     runtime: docker
-    plan: starter
+    plan: 0.5c-512mb
     region: frankfurt
     dockerfilePath: ./Dockerfile
     dockerContext: .
